@@ -1,0 +1,46 @@
+{
+  "source": "Kors JA, van Herpen G, Sittig AC, van Bemmel JH (1990). Reconstruction of the Frank vectorcardiogram from standard electrocardiographic leads: diagnostic comparison of different methods. European Heart Journal 11(12):1083-1092. DOI 10.1093/oxfordjournals.eurheartj.a059647 (PMID 2292255).",
+  "verification": "Coefficients cross-verified against Jaros R, Martinek R, Danys L (2019). Comparison of Different Electrocardiography with Vectorcardiography Transformations. Sensors 19(14):3072, Table 2 (open access: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6678609/), which cites Kors 1990. All 24 coefficients agree.",
+  "leads": [
+    "I",
+    "II",
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5",
+    "V6"
+  ],
+  "X": [
+    0.38,
+    -0.07,
+    -0.13,
+    0.05,
+    -0.01,
+    0.14,
+    0.06,
+    0.54
+  ],
+  "Y": [
+    -0.07,
+    0.93,
+    0.06,
+    -0.02,
+    -0.05,
+    0.06,
+    -0.17,
+    0.13
+  ],
+  "Z": [
+    0.11,
+    -0.23,
+    -0.43,
+    -0.06,
+    -0.14,
+    -0.2,
+    -0.11,
+    0.31
+  ],
+  "noise_tolerance_uv": 5.0,
+  "noise_tolerance_source": "Wagner et al. 2020, Scientific Data 7:154, Preprocessing - 16-bit precision at 1 uV/LSB"
+}

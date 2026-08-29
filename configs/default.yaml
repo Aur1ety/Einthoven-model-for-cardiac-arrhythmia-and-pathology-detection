@@ -1,0 +1,12 @@
+# Default pipeline configuration.
+# All paths relative to repository root.
+
+data_dir: data
+sample_rate: 100          # Hz, using PTB-XL 100Hz downsampled version
+patient_id_col: patient_id
+
+# PTB-XL provides patient-level stratified folds (1-10).
+# DO NOT create custom splits. Use these directly.
+train_folds: [1, 2, 3, 4, 5, 6, 7, 8]
+val_fold: 9
+test_fold: 10

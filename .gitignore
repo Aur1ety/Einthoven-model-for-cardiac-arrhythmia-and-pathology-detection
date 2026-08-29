@@ -1,0 +1,61 @@
+# Data (raw downloads and derived artifacts)
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/scp_statements.csv
+data/processed/*
+!data/processed/.gitkeep
+!data/processed/einthoven_audit.csv
+!data/processed/einthoven_audit_summary.md
+!data/processed/vcg_kors_coefficients.json
+!data/processed/diagnostic_mapping.csv
+
+# Model artifacts
+*.pt
+*.ckpt
+*.pth
+
+# Numpy arrays (large, regeneratable)
+*.npy
+
+# Plots
+*.png
+
+# Python
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vendor (reference only, not vendored)
+vendor/
+
+# Withheld implementation files (paper in preparation)
+scripts/build_vcg_dataset.py
+scripts/run_phase_b.py
+scripts/einthoven_audit.py
+
+# Logs
+*.log
+
+# Staging (internal dev notes)
+staging/
+
+# Source (withheld implementation)
+src/
+
+# Cluster / ops artifacts
+PHASEB_GPU_STATUS.md
+restart_vllm.sh
+phaseb_STATUS.txt
