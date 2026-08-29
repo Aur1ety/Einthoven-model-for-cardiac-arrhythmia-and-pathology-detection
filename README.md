@@ -4,19 +4,19 @@ Physically grounded deep learning for cardiac pathology detection from ECG.
 
 ## Results
 
-**Phase B: VCG-augmented vs. raw 12-lead — controlled comparison**
+**Phase B: VCG-augmented vs. raw 12-lead, controlled comparison**
 
 A controlled A/B test on PTB-XL's diagnostic superclass task (5 classes:
 CD, HYP, MI, NORM, STTC; one-vs-rest macro AUC; test fold 10). Identical
 architecture, hyperparameters, random seed, and train/val/test split
-between the two runs — only the input channels differ.
+between the two runs. Only the input channels differ.
 
 | Run | Channels | Test AUC | 90% CI |
 |-----|---------:|---------:|--------|
-| Spec 02 — resnet1d_wang (single-sample) | 12 | 0.9293 | — |
-| Spec 02 — inception1d (single-sample) | 12 | 0.9219 | — |
-| Phase B — control | 12 | 0.9301 | [0.9240, 0.9348] |
-| Phase B — vcg_augmented | 15 | 0.9305 | [0.9247, 0.9355] |
+| Spec 02, resnet1d_wang (single-sample) | 12 | 0.9293 | - |
+| Spec 02, inception1d (single-sample) | 12 | 0.9219 | - |
+| Phase B, control | 12 | 0.9301 | [0.9240, 0.9348] |
+| Phase B, vcg_augmented | 15 | 0.9305 | [0.9247, 0.9355] |
 
 Paired ΔAUC (VCG − control) = +0.00055, 95% CI [−0.00216, +0.00305].
 **The CI crosses zero.** The 3 derived Kors VCG channels add no
@@ -25,7 +25,7 @@ architecture and protocol. Full results in
 `output/phase_b/results_table.md` and the per-model `te_results.csv`
 files.
 
-**Einthoven-consistency audit — a standalone finding**
+**Einthoven-consistency audit, a standalone finding**
 
 A systematic check of the limb-lead identities (Einthoven's triangle,
 aVR, aVL, aVF) across all 21,799 PTB-XL records, using the Kors 1990
@@ -34,11 +34,11 @@ regression coefficients (verified against Jaros et al. 2019, Table 2).
 - **99.74%** of records are consistent to within 1–1.5 µV (ADC
   quantization level)
 - Only **57 records (0.26%)** are flagged, all with heavy-tailed
-  artifacts (motion, electrode pop, lead disconnection) — not
+  artifacts (motion, electrode pop, lead disconnection), not
   arithmetic errors
 - PTB-XL's own noise annotations do **not** predict the audit flag
   (0.20% of annotated-noisy records flagged vs. 0.28% of unannotated
-  records) — the two appear to capture different failure modes
+  records), the two appear to capture different failure modes
 
 This is a standalone, citable quality-control finding for anyone using
 PTB-XL. The audit dataset (`einthoven_audit.csv`) and verified transform
@@ -132,7 +132,7 @@ Einthoven/
 ```
 
 Note: the VCG-channel construction and Phase B training scripts are
-intentionally not included in this repository — see "Implementation"
+intentionally not included in this repository, see "Implementation"
 above.
 
 ## Citation
