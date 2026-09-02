@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Einthoven Project Analysis</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+      text-align: left;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+      vertical-align: top;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+    }
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Einthoven Project Analysis</h1>
+</header>
+<h1 id="einthoven-supporting-research-papers">Einthoven: Physically Grounded Deep
+Learning for ECG Diagnosis</h1>
+<hr />
+<h2 id="what-is-this-project">What is this project?</h2>
+<p><strong>The one-line version:</strong> an ECG machine gives you 12 separate
+traces. Physics says those 12 traces are just 2D shadows of one 3D electrical
+vector beating inside the heart. This project tests whether giving a neural
+network that reconstructed 3D vector (the vectorcardiogram, or VCG) on top of
+the 12 raw traces makes it better at diagnosing heart conditions.</p>
+<p><strong>The hypothesis:</strong> modern deep learning models treat the 12
+leads as a flat pile of 12 signals and learn the relationships between them
+themselves. But the relationships are actually known: they are fixed linear
+equations published by Kors et al. in 1990, which rebuild the 3D cardiac
+vector from leads I, II, V1 to V6. If we hand the model the physics directly
+as 3 extra channels, maybe it learns faster and diagnoses better. The honest
+question is whether it already figures all of that out on its own.</p>
+<p><strong>Short answer (spoiler):</strong> under our exact protocol, the 3
+physics channels added no measurable improvement. That is a real, defensible
+negative result, and the project still produced two genuinely useful side
+findings (a quality-control audit and a cross-dataset generalization study)
+that stand on their own.</p>
+<hr />
+<h2 id="data">The data</h2>
+<p><strong>Primary dataset: PTB-XL</strong> (<a href="https://www.nature.com/articles/s41597-020-0495-6">Wagner et al. 2020, Scientific Data</a>)</p>
+<ul>
+<li>21,799 real 12-lead ECG recordings from 18,869 patients, 100 Hz, 10-second windows</li>
+<li>Every record has cardiologist-verified labels in the SCP-ECG coding system</li>
+<li>Labels are grouped into 5 diagnostic superclasses:
+<ul>
+<li><strong>NORM</strong> (normal), <strong>MI</strong> (heart attack history), <strong>STTC</strong> (ST/T changes), <strong>CD</strong> (conduction disturbances), <strong>HYP</strong> (hypertrophy)</li>
+</ul></li>
+<li>411 records are excluded from the classification task because their SCP labels map to none of the 5 diagnostic superclasses, leaving the 21,388-record standard PTB-XL superdiagnostic subset (this is a label-coverage filter, not a pacemaker filter; 291 records carry a pacemaker annotation and most, but not all, fall inside these 411)</li>
+<li>Official split used throughout, exactly as the dataset paper prescribes: folds 1 to 8 for training, fold 9 for validation, fold 10 for testing. Splits are patient-disjoint (the same patient never appears in both train and test), which prevents the model from memorizing a person instead of learning a pattern</li>
+</ul>
+<p><strong>Secondary dataset (generalization test): CPSC2018</strong>
+(<a href="https://physionet.org/content/challenge-2020/1.0.2/">PhysioNet, CC BY 4.0</a>)</p>
+<ul>
+<li>6,877 real ECGs recorded in China, 12 leads, 500 Hz</li>
+<li>9 native classes: Normal, AF, I-AVB, LBBB, RBBB, PAC, PVC, STD, STE</li>
+<li>Used to test whether a model trained on German patients also works on Chinese patients. Zero training on this data: the PTB-XL-trained model was only run, never fine-tuned</li>
+</ul>
+<hr />
+<h2 id="method">The method</h2>
+<p><strong>Step 1. Reproduce the official baselines.</strong> Using the
+official benchmarking code
+(<a href="https://github.com/helme/ecg_ptbxl_benchmarking">helme/ecg_ptbxl_benchmarking</a>,
+Strodthoff et al. 2020,
+<a href="https://arxiv.org/abs/2004.13701">arXiv:2004.13701</a>), two
+12-channel models were trained on the exact official split:</p>
+<table>
+<thead>
+<tr><th>Model</th><th>Test AUC</th></tr>
+</thead>
+<tbody>
+<tr><td>resnet1d_wang</td><td>0.9293</td></tr>
+<tr><td>inception1d</td><td>0.9219</td></tr>
+</tbody>
+</table>
+<p>These match the published benchmark numbers, confirming the pipeline is
+correct before any new idea is tested.</p>
+<p><strong>Step 2. The VCG transform.</strong> The Kors 1990 regression
+(<a href="https://doi.org/10.1093/oxfordjournals.eurheartj.a059647">Kors et al. 1990, European Heart Journal</a>)
+computes 3 channels (X, Y, Z = the 3D cardiac vector) from 8 of the 12 leads,
+using 24 published coefficients. All 24 coefficients were independently
+cross-verified against a second open-access source
+(<a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6678609/">Jaros et al. 2019, Sensors, Table 2</a>)
+and agree exactly. The VCG model simply gets those 3 extra channels alongside
+the 12 raw leads (15 channels total).</p>
+<p><strong>Step 3. The controlled A/B test (Phase B).</strong> Identical
+architecture, hyperparameters, random seed, and train/val/test split. Only
+the input channels differ: 12 (control) vs 15 (VCG-augmented).</p>
+<hr />
+<h2 id="results">The results</h2>
+<h3 id="phase-b">Finding 1: Phase B null result (the main test)</h3>
+<table>
+<thead>
+<tr><th>Run</th><th>Channels</th><th>Test AUC</th><th>90% CI</th></tr>
+</thead>
+<tbody>
+<tr><td>Control</td><td>12</td><td>0.9301</td><td>[0.9240, 0.9348]</td></tr>
+<tr><td>VCG-augmented</td><td>15</td><td>0.9305</td><td>[0.9247, 0.9355]</td></tr>
+</tbody>
+</table>
+<p>Paired difference (VCG minus control) = +0.00055, 95% CI
+[&minus;0.00216, +0.00305]. <strong>The CI crosses zero: no statistically
+significant difference.</strong> The physics channels add no measurable
+diagnostic value on top of the raw leads under this architecture and
+protocol. The neural network already extracts everything the VCG gives it.</p>
+<h3 id="audit">Finding 2: the Einthoven-consistency audit (standalone, citable)</h3>
+<p>Because the 12 limb leads obey exact arithmetic identities (Einthoven's
+triangle: II = I + III, and similar rules for the augmented leads), every
+record can be checked for internal consistency. We ran this check on all
+21,799 PTB-XL records:</p>
+<ul>
+<li><strong>99.74%</strong> of records are consistent to within 1 to 1.5 microvolts (the quantization level of the measurement hardware)</li>
+<li>Only <strong>57 records (0.26%)</strong> are flagged, and all of them are heavy-tailed recording artifacts (motion, electrode pop-off, lead disconnect), not arithmetic errors</li>
+<li>PTB-XL's own built-in "noisy" annotations do <em>not</em> predict the audit flag (0.20% of annotated-noisy records flagged vs 0.28% of unannotated records), so the two systems catch different failure modes</li>
+</ul>
+<p>This is a standalone quality-control result for anyone using PTB-XL: the
+audit dataset and the verified transform coefficients are released in the
+repository.</p>
+<h3 id="residuals">Finding 3: do the residuals carry diagnostic info? (Spec 05)</h3>
+<p>Follow-up question: the consistency checks leave a small residual (how far
+a record deviates from the exact identity). Could that residual differ by
+diagnosis? Tested on 21,508 records with proper multiple-comparison
+correction (Benjamini-Hochberg FDR, alpha 0.05):</p>
+<ul>
+<li>4 Kruskal-Wallis tests (one per residual type): 3 survive correction, but the largest effect size is eta-squared = 0.0039, far below the 0.01 "small effect" threshold</li>
+<li>20 Mann-Whitney tests (4 residual types x 5 classes): 8 survive correction, but the largest Cliff's delta is 0.044, well below the 0.147 "negligible to small" boundary</li>
+</ul>
+<p><strong>Conclusion: statistically significant, practically negligible.</strong>
+A dataset this big detects tiny distributional shifts that carry no useful
+diagnostic information. The residuals do not help distinguish patients.</p>
+<h3 id="generalization">Finding 4: cross-dataset generalization to CPSC2018 (Spec 06)</h3>
+<p>The PTB-XL-trained resnet1d_wang model was run (zero training) on 4,746
+usable CPSC2018 records. Important limitation, stated up front: CPSC2018
+contains <strong>zero MI and zero HYP records</strong>, so this only tests 3
+of the 5 superclasses (NORM, CD, STTC).</p>
+<table>
+<thead>
+<tr><th>Variant</th><th>N</th><th>Macro AUC</th><th>90% CI</th></tr>
+</thead>
+<tbody>
+<tr><td>Full set (STD + STE as STTC)</td><td>4,746</td><td>0.7765</td><td>[0.7679, 0.7833]</td></tr>
+<tr><td>STD-only (STE removed)</td><td>4,526</td><td>0.8020</td><td>[0.7958, 0.8079]</td></tr>
+<tr><td>NORM/CD only (STTC removed)</td><td>3,659</td><td>0.8483</td><td>[0.8394, 0.8561]</td></tr>
+</tbody>
+</table>
+<p>Compared to the in-distribution PTB-XL AUC of 0.9293, performance drops
+substantially, and the drop is not uniform:</p>
+<ul>
+<li><strong>NORM generalizes best</strong> (AUC 0.849 to 0.878): a normal ECG looks nearly the same on any patient, anywhere in the world</li>
+<li><strong>CD generalizes moderately</strong> (AUC 0.813 to 0.819): conduction blocks produce distinctive, anatomy-driven waveforms (wide QRS, axis deviation) that transfer across populations</li>
+<li><strong>STTC generalizes worst</strong> (AUC 0.667 with STE, 0.729 without): ST/T changes are subtle, low-level morphology deviations highly sensitive to electrode placement, baseline wander, and label conventions</li>
+</ul>
+<p>The three-variant design isolates the STE question: removing STE raises
+AUC by +0.025, but removing the remaining ST-T records gives another +0.046.
+So the STE label-mapping decision explains roughly one-third of the STTC
+gap; the other two-thirds is inherent: <strong>STTC as a class simply does
+not transfer well from PTB-XL to CPSC2018.</strong></p>
+<hr />
+<h2 id="what-it-means">What the results mean</h2>
+<p>Three honest takeaways:</p>
+<ol>
+<li><strong>The main hypothesis did not survive the test.</strong> For resnet1d_wang on PTB-XL, 3 known-physics VCG channels are redundant: the model learns the same information from the raw leads. This is a negative result reported as a negative result, not papered over.</li>
+<li><strong>The negative result is informative, not worthless.</strong> It says that for this architecture family and this task, physics-grounded inputs do not beat learned inputs. The value of VCG-based inputs remains open for architectures that cannot learn lead relationships as well (shallower models, smaller datasets, different tasks).</li>
+<li><strong>The side findings are real contributions.</strong> (a) A ready-to-use consistency audit for PTB-XL with verified Kors coefficients, (b) a corrected, FDR-controlled analysis of residual-diagnosis dependence, (c) a zero-training cross-dataset generalization study showing which superclasses transfer across populations and which do not.</li>
+</ol>
+<hr />
+<h2 id="published">What is published</h2>
+<p><strong>Repository:</strong> <a href="https://github.com/Aur1ety/Einthoven-model-for-cardiac-arrhythmia-and-pathology-detection">Einthoven-model-for-cardiac-arrhythmia-and-pathology-detection</a></p>
+<ul>
+<li>Public now: full results (Phase B table, audit data, coefficients, generalization report), baseline reproduction code, acceptance-criteria verifiers</li>
+<li>Withheld until the paper is published: the VCG channel construction script, the Phase B training script, the audit script, and the model source (kept out to avoid leaking methodological details before submission)</li>
+<li>License: all rights reserved until publication</li>
+</ul>
+<hr />
+<h2 id="next-steps">Next steps</h2>
+<ol>
+<li><strong>Cost-sensitive threshold optimization</strong> on PTB-XL: tune decision thresholds to clinical costs (a missed MI is far worse than a false alarm) and report F1/recall at matched specificity, not just AUC</li>
+<li><strong>Paper write-up</strong> packaging the null result + audit + generalization study as the contribution, with the withheld code released alongside</li>
+</ol>
+<hr />
+<h2 id="references">References</h2>
+<ol>
+<li>Wagner P, Strodthoff N, Bousseljot RD, et al. PTB-XL, a large publicly available electrocardiography dataset. <em>Scientific Data</em> 7:154 (2020). <a href="https://www.nature.com/articles/s41597-020-0495-6">nature.com/articles/s41597-020-0495-6</a></li>
+<li>Strodthoff N, Wagner P, Schaeffter T, et al. Deep learning for ECG analysis: benchmarks and insights from PTB-XL (2020). <a href="https://arxiv.org/abs/2004.13701">arxiv.org/abs/2004.13701</a>; official code: <a href="https://github.com/helme/ecg_ptbxl_benchmarking">github.com/helme/ecg_ptbxl_benchmarking</a></li>
+<li>Kors JA, van Herpen G, Sittig AC, van Bemmel JH. Reconstruction of the Frank vectorcardiogram from standard electrocardiographic leads: diagnostic comparison of different methods. <em>European Heart Journal</em> 11(12):1083-1092 (1990). <a href="https://doi.org/10.1093/oxfordjournals.eurheartj.a059647">doi.org/10.1093/oxfordjournals.eurheartj.a059647</a></li>
+<li>Jaros R, Martinek R, Danys L. Comparison of different electrocardiography with vectorcardiography transformations. <em>Sensors</em> 19(14):3072 (2019), open access. <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6678609/">PMC6678609</a></li>
+<li>CPSC2018 data (China Physiological Signal Challenge 2018), hosted on PhysioNet as part of the PhysioNet/Computing in Cardiology Challenge 2020, v1.0.2, CC BY 4.0. <a href="https://physionet.org/content/challenge-2020/1.0.2/">physionet.org/content/challenge-2020/1.0.2</a>; original data paper: Liu F, et al. An open access database for evaluating the algorithms of electrocardiogram rhythm and morphology abnormality detection. <em>J. Med. Imaging Health Inform.</em> 8(7):1368-1373 (2018)</li>
+</ol>
+</body>
+</html>

@@ -68,6 +68,6 @@ def test_default_yaml_is_valid_and_complete():
 
 def test_readme_documents_patient_level_split():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "patient-level" in readme
+    assert "patient-stratified" in readme
+    assert "patient-disjoint" in readme
     assert "PTB-XL" in readme
-    assert "strat_fold" in readme
