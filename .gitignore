@@ -61,6 +61,11 @@ scripts/preprocess_cpsc2018.py
 scripts/evaluate_cpsc2018.py
 scripts/parse_cpsc2018_labels.py
 scripts/download_cpsc2018.py
+scripts/run_conditional_null.py
+
+# Full project report: LaTeX sources, bibliography and build (withheld until
+# publication; contains the complete methods and findings write-up).
+reports/
 
 # Logs
 *.log
