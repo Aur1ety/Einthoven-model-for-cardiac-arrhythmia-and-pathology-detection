@@ -1,85 +1,612 @@
 @import "tailwindcss";
-@import "@fontsource-variable/inter";
+@import "@fontsource-variable/literata";
+@import "@fontsource-variable/literata/wght-italic.css";
+@import "@fontsource-variable/source-sans-3";
+@import "@fontsource-variable/source-code-pro";
 
-/* Light, document-style research site (same design language as the NeuroPharma
-   checker): dark text on white, one accent, ECG paper in its clinical pink. */
+/* ============================================================================
+   Einthoven: "Five Inks", a journal kept in a lab notebook.
+   Warm paper, black serif text (Literata) and a separate sans "apparatus" voice
+   (Source Sans 3) for labels, figures, tables and controls; Source Code Pro only
+   inside <code>. Numbered figures bracketed by rules, booktabs tables, margin
+   notes. Each of the five PTB-XL classes is written in its own fountain-pen ink
+   (categorical, never a severity scale, NORM is not green) and one crimson accent
+   means only three things: the instant being viewed, the selected item, and
+   keyboard focus. No cards, no shadows, no pills, square corners everywhere.
+   Every colour pair is pinned by src/styles/contrast.test.js.
+   ========================================================================= */
+
 :root {
-  --background: #ffffff;
-  --surface: #f5f6f7;
-  --foreground: #1b1f24;
-  --muted-foreground: #4a5361;
-  --faint: #5d6776;
-  --border: #d8dde3;
-  --border-strong: #6b7480;
-  --accent: #9f1d35;
-  --accent-hover: #7f1629;
-  --link: #1d4f91;
-  --focus: #ffdd00;
-  --focus-ink: #0b0c0c;
+  /* grounds: warm paper (hue about 40 degrees) */
+  --ground: #f6f2e9;
+  --plate: #fcfaf5;
+  --wash: #efe8da;
 
-  /* ECG paper */
+  /* inks: body text, secondary text, faint text and plot axes */
+  --ink: #1e1b16;
+  --ink-2: #4a4238;
+  --ink-3: #62594c;
+  --graphite: #7a6f60;
+
+  /* rules: --rule is decorative only; --rule-strong carries control and plot-frame boundaries (3:1) */
+  --rule: #d8cfbe;
+  --rule-strong: #8c806c;
+  --band: #ebe0c9;
+
+  /* the one accent, a crimson madder lake: ONLY the current instant, the selected item and focus */
+  --madder: #88071a;
+  --focus: var(--madder);
+
+  /* ECG paper: clinical pink, unchanged */
   --paper: #fffafa;
   --grid-minor: #f7d5da;
   --grid-major: #eaa5ae;
-  --trace: #111418;
+  --paper-edge: #b0606c;
+  --trace: #16130f;
 
-  /* the five PTB-XL superclasses: categorical, not a severity scale; nothing is green */
-  --cls-CD: #1d4f91;
-  --cls-HYP: #6b21a8;
-  --cls-MI: #b42318;
-  --cls-NORM: #4a5361;
-  --cls-STTC: #9a4a00;
+  /* the five PTB-XL superclasses: five inks, categorical, NORM is not green */
+  --cls-CD: #076b70;
+  --cls-HYP: #8843c0;
+  --cls-MI: #662132;
+  --cls-NORM: #3b3a8c;
+  --cls-STTC: #855e11;
 
-  --radius: 0.375rem;
+  /* type and measure */
+  --text-body: 1.0625rem;
+  --leading-body: 1.65;
+  --measure: 40rem;
+  --measure-wide: 56rem;
+  --page-max: 80rem;
+  --page-pad: clamp(1rem, 3vw, 2.5rem);
+  --margin-w: 13rem;
+  --margin-gap: 2rem;
+  --rule-heavy: 2px;
+  --rule-light: 1px;
+  --radius: 0;
+}
+
+/* Only this palette exists as Tailwind utilities (text-ink-2, bg-plate, border-rule-strong ...);
+   the default palette, radii, shadows and animations are switched off on purpose. */
+@theme {
+  --color-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --animate-*: initial;
+  --font-serif: 'Literata Variable', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Source Sans 3 Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Source Code Pro Variable', ui-monospace, Consolas, monospace;
 }
 
 @theme inline {
-  --font-sans: 'Inter Variable', system-ui, sans-serif;
-  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-  --color-foreground: var(--foreground);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-faint: var(--faint);
-  --color-border: var(--border);
-  --color-surface: var(--surface);
-  --color-accent: var(--accent);
+  --color-ground: var(--ground);
+  --color-plate: var(--plate);
+  --color-wash: var(--wash);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-graphite: var(--graphite);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-band: var(--band);
+  --color-madder: var(--madder);
+  --color-paper: var(--paper);
+  --color-paper-edge: var(--paper-edge);
 }
 
 @layer base {
-  * { border-color: var(--border); }
-  html { color-scheme: light; }
-  body { font-family: var(--font-sans); background: var(--background); color: var(--foreground); -webkit-font-smoothing: antialiased; }
-  a { color: var(--link); text-decoration-line: underline; text-underline-offset: 0.15em; }
-  a:hover { text-decoration-thickness: 2px; }
-  :where(a, button, summary, select, input, [tabindex]:not([tabindex="-1"])):focus-visible {
+  *, ::before, ::after { border-color: var(--rule); border-radius: 0; }
+  html { color-scheme: light; background-color: var(--ground); }
+  body {
+    font-family: var(--font-serif);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    font-kerning: normal;
+    color: var(--ink);
+    background-color: var(--ground);
+  }
+  h1, h2, h3, h4 { font-family: var(--font-serif); font-weight: 600; color: var(--ink); text-wrap: balance; }
+  /* controls speak in the apparatus voice */
+  button, input, select, textarea { font-family: var(--font-sans); }
+  /* SVG labels would otherwise inherit the serif; sizes and colours stay on the <text> elements */
+  svg text { font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+  code, kbd, samp {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    background-color: var(--wash);
+    padding: 0.05em 0.3em;
+  }
+
+  /* links are ink, set apart by an underline, never by colour alone (WCAG 1.4.1) */
+  a {
+    color: var(--ink);
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-decoration-color: var(--rule-strong);
+    text-underline-offset: 0.18em;
+  }
+  a:hover { text-decoration-color: var(--ink); text-decoration-thickness: 2px; }
+
+  /* focus: a 3px crimson outline separated from the element by a 2px gap of the surrounding
+     surface, so it reaches 3:1 whatever the element's own colour. Elements focused only by script
+     (tabindex="-1": <main>) keep no ring. */
+  :where(:focus-visible:not([tabindex='-1'])) {
     outline: 3px solid var(--focus);
-    outline-offset: 0;
-    box-shadow: 0 0 0 5px var(--focus-ink);
+    outline-offset: 2px;
+    box-shadow: none;
   }
   summary { cursor: pointer; }
-  h1, h2, h3 { letter-spacing: -0.01em; }
+
+  /* the one range input (the 3D view's time slider): track in --rule-strong, thumb in the accent */
+  input[type='range'] {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    height: 1.5rem;
+    min-width: 8rem;
+    cursor: pointer;
+  }
+  input[type='range']::-webkit-slider-runnable-track { height: 3px; background: var(--rule-strong); border: 0; }
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -6.5px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--madder);
+    box-shadow: 0 0 0 2px var(--plate);
+  }
+  input[type='range']::-moz-range-track { height: 3px; background: var(--rule-strong); border: 0; }
+  input[type='range']::-moz-range-progress { height: 3px; background: var(--madder); }
+  input[type='range']::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--madder);
+    box-shadow: 0 0 0 2px var(--plate);
+  }
 }
 
 @layer components {
-  .t-display { font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.25rem); line-height: 1.15; font-weight: 700; }
-  .t-title { font-size: 1.1875rem; line-height: 1.35; font-weight: 700; }
-  .t-body { font-size: 1rem; line-height: 1.6; }
-  .t-label { font-size: 0.875rem; font-weight: 600; color: var(--muted-foreground); }
-  .t-micro { font-size: 0.875rem; line-height: 1.45; color: var(--faint); }
-  .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); }
-  .chip {
-    display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.05rem 0.45rem;
-    border-radius: 0.25rem; border: 1px solid currentColor; font-size: 0.8125rem; font-weight: 600; line-height: 1.5; white-space: nowrap;
+  /* ---------- page column and rhythm ---------- */
+  .page { width: 100%; max-width: var(--page-max); margin-inline: auto; padding-inline: var(--page-pad); }
+  .measure { max-width: var(--measure); }
+  .measure-wide { max-width: var(--measure-wide); }
+
+  /* ---------- skip link: hidden until focused, then an ink block ---------- */
+  .skip-link {
+    position: fixed;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 50;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--ink);
+    color: var(--ground);
+    font: 600 1rem/1.3 var(--font-sans);
+    text-decoration: none;
   }
-  .tab { padding: 0.75rem 0.25rem; font-weight: 600; color: var(--muted-foreground); text-decoration: none; border-bottom: 3px solid transparent; }
-  .tab:hover { color: var(--foreground); }
-  .tab[aria-current="page"] { color: var(--foreground); border-bottom-color: var(--accent); }
-  .row-btn { width: 100%; text-align: left; padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--border); }
-  .row-btn:hover { background: var(--surface); }
-  .row-btn[aria-current="true"] { background: var(--surface); box-shadow: inset 4px 0 0 var(--accent); }
-  .row-btn:focus-visible { outline-offset: -3px; box-shadow: inset 0 0 0 5px var(--focus-ink); }
-  .num { font-variant-numeric: tabular-nums; }
+  .skip-link:not(:focus) {
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* ---------- masthead: typeset on the ground, no bar ---------- */
+  .masthead { padding-top: 1.25rem; }
+  /* DOM order: the banner (title, rule, nav), then the top-level 'About this site' aside, so the landmarks are the same as
+     before the redesign (a complementary landmark must not sit inside the banner). Where subgrid works, the aside is drawn
+     between the title and the rule: the banner spans four rows shared with the masthead and leaves row 2 to the aside.
+     Elsewhere the status line simply follows the tabs. */
+  @supports (grid-template-rows: subgrid) {
+    .masthead { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: repeat(4, auto); }
+    .masthead-banner { grid-area: 1 / 1 / 5 / 2; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: subgrid; }
+    .masthead-banner > .masthead-title { grid-row: 1; }
+    .masthead-banner > .rule-double { grid-row: 3; }
+    .masthead-banner > .nav { grid-row: 4; }
+    .masthead-status { grid-area: 2 / 1; }
+  }
+  .masthead-title { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
+  .wordmark-link { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.625rem; color: var(--ink); text-decoration: none; }
+  .wordmark-link > svg { align-self: center; }
+  .wordmark { font: 700 1.625rem/1.1 var(--font-serif); letter-spacing: -0.01em; }
+  /* upright, not italic: the italic font file must not load on every page */
+  .descriptor { font: 400 1.0625rem/1.3 var(--font-serif); color: var(--ink-2); }
+  @media (max-width: 39.99rem) { .descriptor { display: none; } }
+  .status-line { margin-top: 0.5rem; padding-bottom: 0.625rem; font: 400 1rem/1.5 var(--font-sans); color: var(--ink); }
+  .status-lead { font-weight: 700; color: var(--ink); }
+  /* the journal rule: 2px ink, 2px gap, 1px ink (and inverted for the footer) */
+  .rule-double { height: 5px; border-top: var(--rule-heavy) solid var(--ink); border-bottom: var(--rule-light) solid var(--ink); }
+  .rule-double-inv { height: 5px; border-top: var(--rule-light) solid var(--ink); border-bottom: var(--rule-heavy) solid var(--ink); }
+
+  /* ---------- section tabs: a thumb index hanging from the rule ---------- */
+  /* the padding keeps the focus ring inside the scroller; the negative margin pulls the tabs back onto the rule. The scroll
+     padding leaves room for the ring (3px + 2px gap) when a focused tab is scrolled into view (App.jsx). */
+  .nav { display: flex; gap: 0.125rem; overflow-x: auto; padding: 5px 5px 6px; margin: -5px -5px 0; scroll-padding-inline: 5px; }
+  .tab {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.375rem;
+    padding: 0.55rem 0.75rem;
+    font: 600 0.9375rem/1 var(--font-sans);
+    color: var(--ink-2);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--ink); text-decoration-line: underline; text-decoration-color: currentColor; text-decoration-thickness: 1px; }
+  .tab[aria-current='page'],
+  .tab[aria-current='page']:hover { background-color: var(--ink); color: var(--ground); text-decoration: none; }
+  .tab-num { font-variant-numeric: tabular-nums; color: var(--ink-3); }
+  .tab[aria-current='page'] .tab-num { color: var(--ground); }
+
+  /* ---------- footer ---------- */
+  .colophon { max-width: var(--measure); padding-block: 1rem 2rem; font: 400 0.875rem/1.5 var(--font-sans); color: var(--ink-2); }
+
+  /* ---------- type ---------- */
+  .page-head { margin-bottom: 2.5rem; }
+  .t-kicker { font: 700 0.8125rem/1.3 var(--font-sans); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .t-display {
+    margin-top: 0.25rem;
+    font: 600 clamp(2rem, 1.4rem + 1.9vw, 2.75rem)/1.1 var(--font-serif);
+    letter-spacing: -0.012em;
+    color: var(--ink);
+  }
+  .t-standfirst { margin-top: 0.75rem; max-width: var(--measure); font: 400 1.1875rem/1.55 var(--font-serif); color: var(--ink-2); }
+  .t-title { font: 600 1.375rem/1.3 var(--font-serif); color: var(--ink); }
+  .t-record { font: 600 1.5rem/1.25 var(--font-serif); font-variant-numeric: lining-nums tabular-nums; color: var(--ink); }
+  .t-body { font: 400 var(--text-body)/var(--leading-body) var(--font-serif); }
+  .t-label { font: 600 0.9375rem/1.4 var(--font-sans); color: var(--ink-2); }
+  .t-caption { font: 400 0.9375rem/1.5 var(--font-sans); color: var(--ink-2); }
+  .t-micro { font: 400 0.875rem/1.5 var(--font-sans); color: var(--ink-2); }
+  .num { font-variant-numeric: lining-nums tabular-nums; }
+
+  /* ---------- figures: a 2px rule, a header line with number and scale, the graphic, the caption, a 1px rule ---------- */
+  .fig { border-top: var(--rule-heavy) solid var(--ink); border-bottom: var(--rule-light) solid var(--ink); padding-block: 0.75rem 0.875rem; }
+  .fig-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 0.75rem;
+    row-gap: 0.125rem;
+    margin-bottom: 0.75rem;
+    font-family: var(--font-sans);
+  }
+  .fig-no { font: 700 0.8125rem/1.3 var(--font-sans); font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; }
+  .fig-title { font: 600 0.9375rem/1.3 var(--font-sans); color: var(--ink); }
+  .fig-meta { margin-left: auto; font: 400 0.875rem/1.3 var(--font-sans); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .fig-caption { margin-top: 0.75rem; font: 400 0.9375rem/1.5 var(--font-sans); color: var(--ink-2); }
+  .cap-lead { font-weight: 700; color: var(--ink); }
+  .fig-scroll { overflow-x: auto; }
+  /* keyed letter for small multiples and plane views: a, b, c ... */
+  .key-letter { margin-right: 0.35rem; font: 700 0.9375rem/1 var(--font-sans); color: var(--ink); }
+
+  /* a plate: a figure panel on the lighter paper, bracketed by rules (the 3D view) */
+  .plate {
+    background-color: var(--plate);
+    border-top: var(--rule-heavy) solid var(--ink);
+    border-bottom: var(--rule-light) solid var(--ink);
+    padding: 1rem clamp(0.75rem, 2.5vw, 1.25rem) 1.25rem;
+  }
+  /* a plot field inside a figure: plate paper in a square --rule-strong frame (loop, residual, ROC) */
+  .plot-field { display: block; background-color: var(--plate); border: 1px solid var(--rule-strong); }
+  /* the ECG sheet: clinical pink paper in a square --paper-edge frame */
+  .ecg-sheet { display: block; background-color: var(--paper); border: 1px solid var(--paper-edge); }
+
+  /* static loading placeholders (nothing pulses): a dashed outline and a sentence */
+  .placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 10rem;
+    padding: 1rem;
+    border: 1px dashed var(--rule-strong);
+    background-color: var(--plate);
+    font: 400 0.9375rem/1.4 var(--font-sans);
+    color: var(--ink-2);
+    text-align: center;
+  }
+  /* a blank ECG sheet: paper, a 5 mm grid, the paper-edge frame dashed; the label sits on a paper chip */
+  .placeholder-ecg {
+    aspect-ratio: 1040 / 480;
+    min-height: 0;
+    border-color: var(--paper-edge);
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(to right, var(--grid-major) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  .placeholder-ecg > * { background-color: var(--paper); padding: 0.15rem 0.5rem; }
+
+  /* ---------- margin notes ---------- */
+  /* exactly two children, in this DOM order: the block (wrap several elements in one div), then the .note.
+     Below 80rem the note sits under its block; from 80rem it moves into a 13rem right-hand column. */
+  .annotated { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .annotated > .note { margin-top: 0.75rem; padding-left: 1.25rem; }
+  .note { max-width: var(--measure); font: 400 0.875rem/1.5 var(--font-sans); color: var(--ink-2); }
+  .note::before {
+    content: 'Note';
+    display: block;
+    margin-bottom: 0.2rem;
+    font: 700 0.75rem/1.4 var(--font-sans);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .note > * + * { margin-top: 0.5rem; }
+  @media (min-width: 80rem) {
+    .annotated { grid-template-columns: minmax(0, 1fr) var(--margin-w); column-gap: var(--margin-gap); align-items: start; }
+    .annotated > :not(.note) { grid-column: 1; }
+    .annotated > .note { grid-column: 2; grid-row: 1; margin-top: 0; padding-left: 0; }
+    .annotated.measure-wide { max-width: calc(var(--measure-wide) + var(--margin-gap) + var(--margin-w)); }
+  }
+
+  /* ---------- layout with a register rail (Explorer list, Audit flagged list) ---------- */
+  .rail-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+  @media (min-width: 64rem) {
+    .rail-layout { grid-template-columns: 17rem minmax(0, 1fr); column-gap: 2.5rem; align-items: start; }
+  }
+
+  /* ---------- booktabs tables ---------- */
+  .bt-wrap { overflow-x: auto; }
+  .bt {
+    width: 100%;
+    border-collapse: collapse;
+    border-top: var(--rule-heavy) solid var(--ink);
+    border-bottom: var(--rule-heavy) solid var(--ink);
+    font: 400 1rem/1.4 var(--font-serif);
+    text-align: left;
+  }
+  .bt caption { caption-side: top; padding-bottom: 0.5rem; text-align: left; font: 400 0.9375rem/1.5 var(--font-sans); color: var(--ink-2); }
+  .bt caption .fig-no { margin-right: 0.5rem; }
+  .bt thead th {
+    padding: 0.5rem 0.75rem 0.45rem 0;
+    border-bottom: var(--rule-light) solid var(--ink);
+    font: 600 0.9375rem/1.3 var(--font-sans);
+    color: var(--ink);
+    text-align: left;
+    vertical-align: bottom;
+  }
+  .bt td,
+  .bt tbody th { padding: 0.45rem 0.75rem 0.45rem 0; vertical-align: baseline; }
+  .bt tbody th { font-weight: 400; }
+  .bt tbody tr:first-child > * { padding-top: 0.65rem; }
+  .bt tbody tr:last-child > * { padding-bottom: 0.65rem; }
+  .bt tr > :last-child { padding-right: 0; }
+  /* numeric cells and their headers: right-aligned sans tabular figures */
+  .bt .n,
+  .bt thead th.n { text-align: right; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+  .bt .code { font: 700 0.9375rem/1.4 var(--font-sans); }
+  /* a 'No' cell, set to match the sans .tag ('Yes') beside it */
+  .bt .no { font: 400 0.8125rem/1.4 var(--font-sans); color: var(--ink-3); }
+  /* the number after a score bar (its cell is not .n, because the bar shares it) */
+  .bt .score { flex: none; width: 2.5rem; text-align: right; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+
+  /* score bar: a 6px square-ended bar; set the class ink with .cls-XX on the .bar.
+     The small minimum lets a four-column score table fit a 288px phone column. */
+  .bar { display: block; flex: 1 1 auto; min-width: 1.5rem; height: 6px; background-color: var(--wash); }
+  .bar-fill { display: block; height: 100%; background-color: currentColor; }
+
+  /* ---------- key-number strip (replaces stat cards) ---------- */
+  .keynums { display: grid; grid-template-columns: minmax(0, 1fr); border-top: var(--rule-heavy) solid var(--ink); border-bottom: var(--rule-light) solid var(--ink); }
+  .keynum { padding: 0.75rem 0; }
+  .keynum + .keynum { border-top: 1px solid var(--ink-3); }
+  @media (min-width: 40rem) {
+    .keynums { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+    .keynum { padding: 0.75rem 1rem; }
+    .keynum:first-child { padding-left: 0; }
+    .keynum + .keynum { border-top: 0; border-left: 1px solid var(--ink-3); }
+  }
+  .keynum-value { font: 600 2rem/1.15 var(--font-serif); font-variant-numeric: lining-nums tabular-nums; color: var(--ink); }
+  .keynum-label { margin-top: 0.25rem; font: 400 0.875rem/1.45 var(--font-sans); color: var(--ink-2); }
+
+  /* ---------- class tags: a square swatch plus the printed code, never colour alone ---------- */
+  .tags { display: inline-flex; flex-wrap: wrap; gap: 0.25rem 0.6rem; }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font: 600 0.8125rem/1.4 var(--font-sans);
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  /* drawn with borders, not a background, so the swatch survives forced-colours mode */
+  .tag::before { content: ''; flex: none; width: 0; height: 0; border: 0.25rem solid currentColor; }
+  .tag-open::before { width: 0.5rem; height: 0.5rem; border-width: 1px; }
+  /* class inks: set `color`, so .tag, .bar-fill and SVG currentColor all follow */
+  .cls-CD { color: var(--cls-CD); }
+  .cls-HYP { color: var(--cls-HYP); }
+  .cls-MI { color: var(--cls-MI); }
+  .cls-NORM { color: var(--cls-NORM); }
+  .cls-STTC { color: var(--cls-STTC); }
+
+  /* ---------- controls: square rectangles, no pills ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    min-height: 2.25rem;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--rule-strong);
+    background-color: var(--plate);
+    font: 600 0.9375rem/1.2 var(--font-sans);
+    color: var(--ink);
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .btn:hover:not(:disabled):not([aria-disabled='true']) { background-color: var(--wash); }
+  .btn:disabled,
+  .btn[aria-disabled='true'] { color: var(--ink-3); border-style: dashed; cursor: not-allowed; }
+  /* single-glyph buttons: a fixed square, so the fallback font's glyph width cannot change the layout */
+  .btn-sq { min-width: 2.25rem; padding-inline: 0.5rem; }
+  /* segmented group: [← Beat][Beat 3 of 9][Beat →] with shared borders */
+  .btn-group { display: inline-flex; align-items: stretch; }
+  .btn-group > * + * { margin-left: -1px; }
+  /* a focused tab or button is lifted above its neighbours: a later sibling (the next button in a group, the ink block of
+     the current tab) would otherwise paint over the side of its ring that reaches into it */
+  .tab:focus-visible,
+  .btn:focus-visible { position: relative; z-index: 1; }
+  .btn-group-text {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.25rem;
+    padding: 0.3rem 0.75rem;
+    border-block: 1px solid var(--rule-strong);
+    font: 400 0.9375rem/1.2 var(--font-sans);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  /* native select, squared, with an ink chevron */
+  .select {
+    appearance: none;
+    -webkit-appearance: none;
+    display: block;
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0.4rem 2rem 0.4rem 0.6rem;
+    border: 1px solid var(--rule-strong);
+    background-color: var(--plate);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%231e1b16' stroke-width='1.6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.65rem center;
+    background-size: 0.75rem 0.5rem;
+    font: 400 0.9375rem/1.3 var(--font-sans);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .select:hover { background-color: var(--wash); }
+
+  /* ---------- registers: ruled lists of records (Explorer cases, Audit flagged) ---------- */
+  .register {
+    position: relative;
+    max-height: 40vh;
+    overflow-y: auto;
+    border-top: var(--rule-heavy) solid var(--ink);
+    border-bottom: var(--rule-light) solid var(--ink);
+  }
+  @media (min-width: 64rem) { .register { max-height: 70vh; } }
+  .row-btn {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0.6rem 0.75rem 0.6rem 1.4rem;
+    border-bottom: 1px dotted var(--rule-strong);
+    background-color: transparent;
+    font: 400 1rem/1.5 var(--font-sans);
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+  }
+  .register > li:last-child > .row-btn { border-bottom: 0; }
+  .row-btn:hover { background-color: var(--wash); }
+  /* inset ring: the scroller cannot clip it */
+  .row-btn:focus-visible { outline-offset: -3px; }
+  .row-id { display: inline-block; margin-left: -0.3rem; padding: 0 0.3rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .row-meta { display: block; font: 400 0.875rem/1.45 var(--font-sans); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .row-tags { display: block; margin-top: 0.25rem; }
+  /* selected: plate, ink hairlines, a crimson pointer and the record ID reversed out of ink */
+  .row-btn[aria-current='true'],
+  .row-btn[aria-current='true']:hover {
+    background-color: var(--plate);
+    box-shadow: inset 0 1px 0 var(--ink), inset 0 -1px 0 var(--ink);
+  }
+  .row-btn[aria-current='true']::before {
+    content: '';
+    position: absolute;
+    left: 0.45rem;
+    top: calc(0.6rem + 0.75rem - 5px);
+    border-style: solid;
+    border-width: 5px 0 5px 7px;
+    border-color: transparent transparent transparent var(--madder);
+  }
+  .row-btn[aria-current='true'] .row-id { background-color: var(--ink); color: var(--ground); outline: 1px solid var(--ink); }
+
+  /* ---------- Method page: dashed lists, numbered references, section numbers ---------- */
+  .list-dash { list-style: '–  '; padding-left: 1.25rem; }
+  .list-dash > li + li { margin-top: 0.5rem; }
+  .list-dash > li::marker { color: var(--ink-3); font-family: var(--font-sans); }
+  .refs { list-style: none; padding-left: 0; counter-reset: ref; }
+  .refs > li { padding-left: 2rem; counter-increment: ref; }
+  .refs > li + li { margin-top: 0.5rem; }
+  /* an inline block hung into the indent, so the smaller marker sits on the first line's baseline (not above it) */
+  .refs > li::before {
+    content: '[' counter(ref) ']' / '';
+    display: inline-block;
+    width: 2rem;
+    margin-left: -2rem;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-3);
+  }
+  /* display-only section numbers (4.1, 4.2 ...): set --sec-prefix: '4.' on the wrapper, class .sec-h on each h2 */
+  .sec-numbered { counter-reset: sec; }
+  .sec-numbered .sec-h { counter-increment: sec; }
+  .sec-numbered .sec-h::before {
+    content: var(--sec-prefix, '') counter(sec) / '';
+    margin-right: 0.6em;
+    font: 700 0.8em/1 var(--font-sans);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-3);
+  }
 }
 
+/* More contrast asked for: faint inks, rules and frames all become ink. */
+@media (prefers-contrast: more) {
+  :root {
+    --ink-3: var(--ink);
+    --rule-strong: var(--ink);
+    --graphite: var(--ink);
+    --paper-edge: var(--ink);
+    --rule: var(--ink-2);
+  }
+}
+
+/* Forced colours (Windows contrast themes): backgrounds are dropped, so every state that is
+   drawn with a fill gets a border, an outline or system colours instead. */
+@media (forced-colors: active) {
+  .tab[aria-current='page'],
+  .tab[aria-current='page']:hover { forced-color-adjust: none; background-color: Highlight; color: HighlightText; }
+  .tab[aria-current='page'] .tab-num { color: HighlightText; }
+  .row-btn[aria-current='true'] { border-top: 1px solid CanvasText; border-bottom-style: solid; }
+  .row-btn[aria-current='true'] .row-id { forced-color-adjust: none; background-color: Highlight; color: HighlightText; outline-color: CanvasText; }
+  .row-btn[aria-current='true']::before { forced-color-adjust: none; border-color: transparent transparent transparent Highlight; }
+  .btn:disabled,
+  .btn[aria-disabled='true'] { color: GrayText; border-color: GrayText; }
+  .bar { forced-color-adjust: none; background-color: Canvas; outline: 1px solid CanvasText; }
+  .bar-fill { forced-color-adjust: none; background-color: CanvasText; }
+  .select { appearance: auto; -webkit-appearance: auto; background-image: none; padding-right: 0.6rem; }
+  .placeholder-ecg { background-image: none; }
+  input[type='range'] { forced-color-adjust: none; }
+  /* forced-color-adjust: none also keeps their focus ring crimson, which a dark theme's Canvas hides (2:1 on black):
+     give it the system Highlight that every other focus ring gets in this mode (a 2px Canvas gap sets it off the current tab) */
+  .tab[aria-current='page']:focus-visible,
+  input[type='range']:focus-visible { outline-color: Highlight; }
+  input[type='range']::-webkit-slider-runnable-track { background: CanvasText; }
+  input[type='range']::-webkit-slider-thumb { background: Highlight; box-shadow: 0 0 0 2px Canvas; }
+  input[type='range']::-moz-range-track { background: CanvasText; }
+  input[type='range']::-moz-range-progress { background: Highlight; }
+  input[type='range']::-moz-range-thumb { background: Highlight; box-shadow: 0 0 0 2px Canvas; }
+}
+
+/* Motion: there are no transitions at all; this also stops any stray animation from repeating. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

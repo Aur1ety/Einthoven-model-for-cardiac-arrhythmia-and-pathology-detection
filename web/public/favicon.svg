@@ -1,4 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#9f1d35"/>
-  <path d="M4 18h6l2-5 3 10 3-15 2.5 10H28" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <style>.t{stroke:#1e1b16}.d{fill:#1e1b16}@media (prefers-color-scheme:dark){.t{stroke:#f6f2e9}.d{fill:#f6f2e9}}</style>
+  <path class="t" d="M4 7h24L16 27z" fill="none" stroke-width="2.6" stroke-linejoin="round"/>
+  <circle class="d" cx="4" cy="7" r="3"/>
+  <circle class="d" cx="28" cy="7" r="3"/>
+  <circle class="d" cx="16" cy="27" r="3"/>
 </svg>

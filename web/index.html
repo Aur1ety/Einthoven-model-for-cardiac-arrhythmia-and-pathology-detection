@@ -8,13 +8,21 @@
       name="description"
       content="A deep-learning ECG classifier on PTB-XL (test macro AUC 0.930), its saved predictions on real 12-lead ECGs, and an Einthoven's-law consistency audit of all 21,799 recordings. Research demo, not a medical device."
     />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#f6f2e9" />
     <meta name="color-scheme" content="light" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- the text face (Literata, latin, upright): fetched early so the serif fallback shows for less time -->
+    <link
+      rel="preload"
+      href="/node_modules/@fontsource-variable/literata/files/literata-latin-wght-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
   </head>
   <body>
     <noscript>
-      <p style="padding: 1rem; font-family: system-ui, sans-serif">
+      <p style="padding: 1rem; font-family: Georgia, serif; color: #1e1b16; background: #f6f2e9">
         This site needs JavaScript to draw the ECGs. Research demo, not a medical device.
       </p>
     </noscript>

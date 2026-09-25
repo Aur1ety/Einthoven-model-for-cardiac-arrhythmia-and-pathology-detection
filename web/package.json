@@ -12,7 +12,9 @@
     "check": "vitest run && vite build"
   },
   "dependencies": {
-    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource-variable/literata": "5.3.0",
+    "@fontsource-variable/source-code-pro": "5.3.0",
+    "@fontsource-variable/source-sans-3": "5.3.0",
     "lucide-react": "^0.400.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0"

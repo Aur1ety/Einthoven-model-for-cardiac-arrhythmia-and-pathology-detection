@@ -1,10 +1,16 @@
 // A 12-lead ECG drawn as it is printed clinically: 25 mm/s, 10 mm/mV, pink
 // grid, 1 mV calibration pulse on every row, 3 x 4 leads plus a lead II strip.
-import { useEffect, useId, useMemo, useRef } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { FS, U_PER_MM, X_PER_SAMPLE, calibrationPath, paperLayout, tracePath } from '../lib/ecg'
 import { useEcg } from '../lib/data'
+import { useRenderedWidth } from '../lib/useWidth'
 
-export default function EcgPaper({ id, caption, cursor = null }) {
+const MIN_SHEET_PX = 640 // the sheet never renders narrower than this (min-w-[640px]); wider screens scroll less
+const LABEL_PX = 12 // lead labels render at this CSS size whatever the sheet's width (never under 11 px)
+const HALO_PX = 2.5 // paper-coloured halo around the lead labels, so a crossing trace cannot hide them
+
+// `label` is the figure number the page gives this sheet ('Figure 1.1' in the explorer, 'Figure 2.3' in the audit)
+export default function EcgPaper({ id, caption, label, cursor = null }) {
   const { data, error } = useEcg(id)
   const gridId = useId().replace(/:/g, '')
   const layout = useMemo(() => (data ? paperLayout(data.leads, data.signal) : null), [data])
@@ -13,28 +19,67 @@ export default function EcgPaper({ id, caption, cursor = null }) {
   const cursorX = layout && cursor != null ? layout.calWidth + cursor * FS * X_PER_SAMPLE : null
 
   // on a narrow screen the paper scrolls sideways; keep the cursor in sight
-  const scroller = useRef(null)
+  const [scroller, setScroller] = useState(null)
   useEffect(() => {
-    const el = scroller.current
+    const el = scroller
     if (cursorX == null || !el || el.scrollWidth <= el.clientWidth) return
     const x = (cursorX / layout.width) * el.scrollWidth
     if (x < el.scrollLeft + 24 || x > el.scrollLeft + el.clientWidth - 24) el.scrollLeft = x - el.clientWidth / 2
-  }, [cursorX, layout])
+  }, [cursorX, layout, scroller])
+
+  // the viewBox scales text with the sheet, so size the lead labels from the sheet's rendered width
+  const [sheet, setSheet] = useState(null)
+  const sheetPx = useRenderedWidth(sheet, MIN_SHEET_PX)
+  // while the sheet is wider than its scroller, the scroller is a named, focusable region, so a keyboard can scroll it
+  const scrollerPx = useRenderedWidth(scroller, MIN_SHEET_PX)
+  const scrolls = sheetPx > scrollerPx + 0.5
 
   if (error) return <p className="t-body">This ECG could not load. Reloading the page usually fixes it.</p>
-  if (!layout) return <div className="aspect-[1040/480] w-full rounded bg-[var(--paper)] animate-pulse" aria-label="Loading the ECG" />
+
+  const head = (
+    <div className="fig-head">
+      {label && <span className="fig-no">{label}</span>}
+      <span className="fig-title">12-lead ECG</span>
+      <span className="fig-meta">25 mm/s · 10 mm/mV · 10 s</span>
+    </div>
+  )
+  const figcaption = (
+    <figcaption className="fig-caption">
+      {caption && <span className="cap-lead">{caption}</span>}
+      {caption ? ' ' : ''}25 mm/s, 10 mm/mV; small squares 1 mm (0.04 s, 0.1 mV), large squares 5 mm. Bottom row: lead II
+      for the full 10 seconds.
+    </figcaption>
+  )
+
+  if (!layout)
+    return (
+      <figure className="fig">
+        {head}
+        <div className="placeholder placeholder-ecg">
+          <span>Loading the ECG…</span>
+        </div>
+        {figcaption}
+      </figure>
+    )
 
   const small = U_PER_MM
   const big = 5 * U_PER_MM
+  const unitsPerPx = layout.width / Math.max(sheetPx, 1)
+  const labelSize = LABEL_PX * unitsPerPx
   return (
-    <figure className="space-y-1.5">
-      <div ref={scroller} className="overflow-x-auto">
+    <figure className="fig">
+      {head}
+      <div
+        ref={setScroller}
+        className="fig-scroll"
+        {...(scrolls ? { tabIndex: 0, role: 'region', 'aria-label': `12-lead ECG, record ${id}, scrolls sideways` } : {})}
+      >
         <svg
+          ref={setSheet}
           role="img"
           aria-label={`12-lead ECG, record ${id}: 10 seconds at 100 samples per second, drawn at 25 mm/s and 10 mm/mV.`}
           viewBox={`0 ${-layout.top} ${layout.width} ${layout.height + layout.top + layout.bottom}`}
-          className="block w-full min-w-[640px] rounded border"
-          style={{ background: 'var(--paper)' }}
+          className="ecg-sheet w-full min-w-[640px]"
         >
           <defs>
             <pattern id={`${gridId}-s`} width={small} height={small} patternUnits="userSpaceOnUse">
@@ -45,6 +90,8 @@ export default function EcgPaper({ id, caption, cursor = null }) {
               <path d={`M${big} 0V${big}H0`} fill="none" stroke="var(--grid-major)" strokeWidth="0.9" />
             </pattern>
           </defs>
+          {/* the paper is drawn, not only a CSS background: forced-colours themes replace backgrounds, and a dark one would hide the trace */}
+          <rect y={-layout.top} width={layout.width} height={layout.height + layout.top + layout.bottom} fill="var(--paper)" />
           <rect y={-layout.top} width={layout.width} height={layout.height + layout.top + layout.bottom} fill={`url(#${gridId}-b)`} />
           <g fill="none" stroke="var(--trace)" strokeWidth="1.1" strokeLinejoin="round" strokeLinecap="round">
             {layout.rowBaselines.map((y) => (
@@ -61,11 +108,19 @@ export default function EcgPaper({ id, caption, cursor = null }) {
               x2={cursorX}
               y1={-layout.top}
               y2={layout.height + layout.bottom}
-              stroke="var(--accent)"
-              strokeWidth="1.6"
+              stroke="var(--madder)"
+              strokeWidth="1.75"
             />
           )}
-          <g fontSize="11" fontWeight="700" fill="var(--trace)">
+          <g
+            fontSize={labelSize.toFixed(1)}
+            fontWeight="700"
+            fill="var(--ink)"
+            stroke="var(--paper)"
+            strokeWidth={(HALO_PX * unitsPerPx).toFixed(1)}
+            strokeLinejoin="round"
+            paintOrder="stroke"
+          >
             {layout.segments.map((s) => (
               <text key={`t-${s.lead}-${s.rhythm ? 'r' : s.from}`} x={s.x0 + 4} y={s.y0 - 38}>
                 {s.lead}
@@ -74,10 +129,7 @@ export default function EcgPaper({ id, caption, cursor = null }) {
           </g>
         </svg>
       </div>
-      <figcaption className="t-micro">
-        {caption ? `${caption} ` : ''}25 mm/s, 10 mm/mV; small squares 1 mm (0.04 s, 0.1 mV), large squares 5 mm. Bottom row: lead II
-        for the full 10 seconds.
-      </figcaption>
+      {figcaption}
     </figure>
   )
 }
