@@ -62,6 +62,11 @@ scripts/evaluate_cpsc2018.py
 scripts/parse_cpsc2018_labels.py
 scripts/download_cpsc2018.py
 scripts/run_conditional_null.py
+# ...and their working outputs (reports, label mappings, statistics), kept out
+# of an accidental `git add -A`. The headline results themselves are already
+# public in Einthoven_Research_Analysis.html.
+output/phase_generalization/
+output/phase_c_residual_analysis/
 
 # Full project report: LaTeX sources, bibliography and build (withheld until
 # publication; contains the complete methods and findings write-up).
@@ -73,8 +78,9 @@ reports/
 # Staging (internal dev notes)
 staging/
 
-# Source (withheld implementation)
-src/
+# Source (withheld implementation). Anchored to the repo root: a bare "src/"
+# also matched web/src/, hiding the website's code from git and from Tailwind.
+/src/
 
 # Cluster / ops artifacts
 PHASEB_GPU_STATUS.md

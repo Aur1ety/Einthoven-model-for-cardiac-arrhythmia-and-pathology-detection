@@ -33,9 +33,12 @@ regression coefficients (verified against Jaros et al. 2019, Table 2).
 
 - **99.74%** of records are consistent to within 1–1.5 µV (ADC
   quantization level)
-- Only **57 records (0.26%)** are flagged, all with heavy-tailed
-  artifacts (motion, electrode pop, lead disconnection), not
-  arithmetic errors
+- Only **57 records (0.26%)** are flagged (any identity off by more
+  than 5 µV at any sample). The audit did not test causes. In 34 of the
+  57 the break is confined to the last 0.1 s of the 10 s window (41
+  within the last second), which points to an effect at the edge of the
+  stored window; 7 break for half a second or more (computed by
+  `web/scripts/export_site_data.py`)
 - PTB-XL's own noise annotations do **not** predict the audit flag
   (0.20% of annotated-noisy records flagged vs. 0.28% of unannotated
   records), the two appear to capture different failure modes
@@ -134,6 +137,35 @@ Einthoven/
 Note: the VCG-channel construction and Phase B training scripts are
 intentionally not included in this repository, see "Implementation"
 above.
+
+## Website
+
+`web/` is a static research site (React + Vite, no server): an **ECG
+explorer** (100 test-fold PTB-XL ECGs, 20 per class drawn with a fixed
+seed, drawn at 25 mm/s and 10 mm/mV next to the Phase B control model's
+saved scores and the cardiologists' labels), the **Einthoven audit**
+(all four limb-lead identities, with the 57 flagged recordings and
+their residual traces), the **results** (per-class ROC, the paired
+VCG-vs-control interval) and a **method & limitations** page. No model
+runs in the browser; the site shows the saved test-set predictions.
+
+`python web/scripts/export_site_data.py` writes `web/public/data/`. It
+rebuilds the fold-10 label matrix from `ptbxl_database.csv` and asserts
+it equals the stored `y_test.npy` (so every score sits on the right
+ECG), and re-derives the macro AUCs and the paired interval against the
+stored results. The CPSC2018 results are left out unless
+`--include-unpublished` is passed. The exported ECGs are PTB-XL data
+(CC BY 4.0) and carry that attribution on the site.
+
+```bash
+cd web
+npm install
+npm run dev      # local preview
+npm run check    # unit tests (geometry, data, audit identities) + build
+```
+
+Deploy: import the repository in Vercel with **root directory `web`**
+(framework preset Vite, no environment variables).
 
 ## Citation
 
