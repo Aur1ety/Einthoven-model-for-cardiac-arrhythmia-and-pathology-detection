@@ -143,18 +143,26 @@ above.
 `web/` is a static research site (React + Vite, no server): an **ECG
 explorer** (100 test-fold PTB-XL ECGs, 20 per class drawn with a fixed
 seed, drawn at 25 mm/s and 10 mm/mV next to the Phase B control model's
-saved scores and the cardiologists' labels), the **Einthoven audit**
+saved scores and the cardiologists' labels), a **3D heart-vector view**
+for each of those ECGs (the Kors VCG loop, one beat at a time, rotatable,
+with the three standard planes and a cursor linking it to the 12-lead
+trace; drawn from the 500 Hz records), the **Einthoven audit**
 (all four limb-lead identities, with the 57 flagged recordings and
 their residual traces), the **results** (per-class ROC, the paired
 VCG-vs-control interval) and a **method & limitations** page. No model
 runs in the browser; the site shows the saved test-set predictions.
 
-`python web/scripts/export_site_data.py` writes `web/public/data/`. It
-rebuilds the fold-10 label matrix from `ptbxl_database.csv` and asserts
+To rebuild the site's data, from the repository root:
+
+```bash
+python web/scripts/fetch_500hz.py        # the 500 Hz records for the 3D view, checked against PhysioNet's SHA256SUMS
+python web/scripts/export_site_data.py   # writes web/public/data/
+```
+
+The export rebuilds the fold-10 label matrix from `ptbxl_database.csv` and asserts
 it equals the stored `y_test.npy` (so every score sits on the right
 ECG), and re-derives the macro AUCs and the paired interval against the
-stored results. The CPSC2018 results are left out unless
-`--include-unpublished` is passed. The exported ECGs are PTB-XL data
+stored results. Only PTB-XL results are exported. The exported ECGs are PTB-XL data
 (CC BY 4.0) and carry that attribution on the site.
 
 ```bash

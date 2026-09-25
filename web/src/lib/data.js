@@ -46,3 +46,4 @@ function useJson(url) {
 
 export const useSite = () => useJson('/data/site.json')
 export const useEcg = (id) => useJson(id == null ? null : `/data/ecg/${id}.json`)
+export const useVcg = (id) => useJson(id == null ? null : `/data/ecg/${id}.vcg.json`)

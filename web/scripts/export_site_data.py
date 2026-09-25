@@ -30,6 +30,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from scipy.signal import butter, filtfilt, find_peaks
 from sklearn.metrics import roc_auc_score, roc_curve
 
 warnings.filterwarnings("ignore", category=UserWarning)  # sklearn version note when unpickling the label binarizer
@@ -68,17 +69,76 @@ def superdiagnostic_test_labels():
     return db, test, y
 
 
-def read_record(filename_lr):
+def read_record(filename, fs_expected=100):
     """WFDB format 16, gain 1000 adu/mV, baseline 0: each int16 is one microvolt."""
-    base = RAW / filename_lr
+    base = RAW / filename
     header = (base.with_suffix(".hea")).read_text().splitlines()
     n_sig, fs, n = (int(float(x)) for x in header[0].split()[1:4])
-    assert (n_sig, fs, n) == (12, 100, 1000), header[0]
+    assert (n_sig, fs, n) == (12, fs_expected, fs_expected * 10), header[0]
     for line in header[1:13]:
         parts = line.split()
         assert parts[1] == "16" and parts[2].startswith("1000") and parts[4] == "0", line
     sig = np.fromfile(base.with_suffix(".dat"), dtype="<i2").reshape(n, 12)
-    return sig.T  # 12 x 1000, microvolts
+    return sig.T  # 12 x (10 s x fs), microvolts
+
+
+# Kors (1990) regression from 8 independent leads to the Frank X, Y, Z leads, as released
+# in data/processed/vcg_kors_coefficients.json. In this convention +X points to the
+# patient's left, +Y towards the feet and +Z towards the back.
+KORS = json.loads((ROOT / "data" / "processed" / "vcg_kors_coefficients.json").read_text(encoding="utf-8"))
+KORS_IDX = [0, 1, 6, 7, 8, 9, 10, 11]  # I, II, V1..V6 in the WFDB lead order
+assert KORS["leads"] == ["I", "II", "V1", "V2", "V3", "V4", "V5", "V6"]
+KORS_M = np.array([KORS["X"], KORS["Y"], KORS["Z"]])
+
+
+def vcg(sig):
+    return KORS_M @ sig[KORS_IDX].astype(float)  # 3 x samples, microvolts
+
+
+def qrs_envelope(leads, fs):
+    """How fast the leads move in the QRS band (5-20 Hz), averaged over 100 ms. The band
+    leaves out baseline wander, most of the T wave and most muscle noise."""
+    b, a = butter(2, (5, 20), btype="band", fs=fs)
+    f = filtfilt(b, a, leads.astype(float), axis=1)
+    speed = np.sqrt((np.gradient(f, axis=1) ** 2).sum(axis=0))
+    k = int(0.1 * fs)
+    return np.convolve(speed, np.ones(k) / k, mode="same")
+
+
+def relative(env, fs):
+    """The envelope as a fraction of a typical beat's peak in this record."""
+    peaks, _ = find_peaks(env, distance=int(0.3 * fs))
+    h = env[peaks]
+    return env / np.median(h[h >= 0.3 * np.percentile(env, 95)])
+
+
+def qrs_times(sig, xyz, fs):
+    """A beat finder for display only (not clinical delineation). A heartbeat shows up in
+    the limb leads (I, II) and in the chest leads (V1-V6) at the same moment; a loose
+    electrode or a noise burst usually shows up in one group only. So a beat is a moment
+    where BOTH groups move at least 0.3x as fast as their typical beat, at least 300 ms
+    after the previous one. Its time is the middle of the QRS: the peak of the same
+    envelope computed on the heart vector itself, within 50 ms."""
+    both = np.minimum(relative(qrs_envelope(sig[[0, 1]], fs), fs), relative(qrs_envelope(sig[6:12], fs), fs))
+    found, _ = find_peaks(both, height=0.3, distance=int(0.3 * fs))
+    env, w = qrs_envelope(xyz, fs), int(0.05 * fs)
+    mids = [max(0, p - w) + int(np.argmax(env[max(0, p - w):p + w + 1])) for p in found]
+    return [round(p / fs, 3) for p in mids]
+
+
+def noise_notes(r):
+    """PTB-XL's own noise annotations for a record, tidied for display (they are terse and
+    partly German: 'alles' = all leads, 'leicht' = slight)."""
+    words = {"alles": "all leads", "leicht": "slight"}
+    out = {}
+    for col, name in [("burst_noise", "bursts"), ("static_noise", "steady noise"), ("baseline_drift", "baseline drift"), ("electrodes_problems", "electrode problems")]:
+        if isinstance(r[col], str):
+            parts = [words.get(t.strip().lower(), t.strip().upper().replace("AV", "aV")) for t in r[col].split(",") if t.strip()]
+            # 'V1,2' means V1 and V2; 'I-aVF' means the leads from I to aVF
+            parts = [f"V{p}" if p.isdigit() and i and parts[i - 1].startswith("V") else p.replace("-", " to ") for i, p in enumerate(parts)]
+            if parts:
+                out[name] = ", ".join(parts)
+    return out
 
 
 def roc_points(y, p, keep=120):
@@ -169,6 +229,10 @@ def main():
         cases.append(m)
     flagged_cases = [meta(e) for e in flagged.index]
 
+    missing = [m["id"] for m in cases if not all((RAW / db.loc[m["id"]].filename_hr).with_suffix(x).exists() for x in (".hea", ".dat"))]
+    if missing:
+        raise SystemExit(f"{len(missing)} of the 500 Hz records are missing; run: python web/scripts/fetch_500hz.py --ids {' '.join(map(str, missing))}")
+
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "ecg").mkdir(exist_ok=True)
     written = 0
@@ -176,6 +240,32 @@ def main():
         sig = read_record(db.loc[m["id"]].filename_lr)
         (OUT / "ecg" / f"{m['id']}.json").write_text(json.dumps({"id": m["id"], "source": f"PTB-XL v1.0.3 record {db.loc[m['id']].filename_lr} (Wagner et al., Scientific Data 2020; https://doi.org/10.13026/kfzx-aw45), converted from WFDB to JSON", "licence": "CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)", "fs": 100, "units": "uV", "leads": LEADS, "signal": sig.tolist()}, separators=(",", ":")))
         written += 1
+        if m in cases:
+            # the 3D heart-vector loop, from the 500 Hz version of the same record (web/scripts/fetch_500hz.py)
+            hr = read_record(db.loc[m["id"]].filename_hr, fs_expected=500)
+            xyz = vcg(hr)
+            # guard against a lead-order slip: each axis from the 500 Hz record must match the SAME axis
+            # from the 100 Hz record best, at the same scale. (They are not identical: PTB-XL made its
+            # 100 Hz files with filtering; across the 100 explorer ECGs the two versions of one axis
+            # correlate at 0.89-1.00 and their spreads differ by a factor of 0.95-1.12.)
+            lo = vcg(sig)
+            corr = np.corrcoef(np.vstack([xyz[:, ::5], lo]))[:3, 3:]
+            assert (corr.argmax(axis=1) == [0, 1, 2]).all() and corr.diagonal().min() > 0.85, (m["id"], corr.round(3))
+            gain = xyz[:, ::5].std(axis=1) / lo.std(axis=1)
+            assert ((gain > 0.8) & (gain < 1.25)).all(), (m["id"], gain.round(3))
+            beats = qrs_times(hr, xyz, 500)
+            # moving each beat onto the heart-vector peak (up to 50 ms) must not bring two beats closer than 300 ms
+            assert len(beats) < 2 or np.diff(beats).min() >= 0.3, (m["id"], beats)
+            assert 3 <= len(beats) <= 35, (m["id"], len(beats))
+            (OUT / "ecg" / f"{m['id']}.vcg.json").write_text(json.dumps({
+                "id": m["id"],
+                "source": f"PTB-XL v1.0.3 record {db.loc[m['id']].filename_hr} (500 Hz), Kors (1990) transform; CC BY 4.0",
+                "fs": 500, "units": "uV", "axes": {"x": "+ to the left", "y": "+ to the feet", "z": "+ to the back"},
+                "x": np.rint(xyz[0]).astype(int).tolist(), "y": np.rint(xyz[1]).astype(int).tolist(), "z": np.rint(xyz[2]).astype(int).tolist(),
+                "qrs_s": beats,
+            }, separators=(",", ":")))
+            m["beats"] = len(beats)
+            m["noise"] = noise_notes(db.loc[m["id"]])
         if m in flagged_cases:
             # where in the 10 s window the identities break (the audit tested no causes; this is location only)
             I, II, III, aVR, aVL, aVF = sig[:6].astype(float)
@@ -216,6 +306,7 @@ def main():
             "labels": "output/phase_b/control/data/y_test.npy (rebuilt from ptbxl_database.csv and asserted equal)",
             "audit": "data/processed/einthoven_audit.csv",
         },
+        "kors": {"leads": KORS["leads"], "X": KORS["X"], "Y": KORS["Y"], "Z": KORS["Z"], "source": "data/processed/vcg_kors_coefficients.json"},
         "licence": "ECG data: PTB-XL v1.0.3, CC BY 4.0 (Wagner et al., Scientific Data 2020; PhysioNet).",
     }
     (OUT / "site.json").write_text(json.dumps(site, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

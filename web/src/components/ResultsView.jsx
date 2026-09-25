@@ -103,8 +103,9 @@ export default function ResultsView({ site }) {
           Does adding vectorcardiogram channels help? No measurable gain.
         </h2>
         <p className="t-body max-w-3xl">
-          Three extra channels reconstructed with the Kors (1990) transform were added to the same model, with everything else
-          identical. On the full test set the macro AUC difference (VCG minus control) is{' '}
+          The idea: to a good approximation, the 12 leads are flat views of one 3D arrow, the heart’s electrical vector (you can turn it for any ECG in
+          the <a href="#explorer">explorer</a>). Its three coordinates, reconstructed with the Kors (1990) transform, were added
+          to the same model as three extra channels, with everything else identical. On the full test set the macro AUC difference (VCG minus control) is{' '}
           <span className="num font-semibold">{sign(r.paired_delta.full_test)}</span>; over {r.paired_delta.resamples} paired
           bootstrap resamples of the test set its mean is <span className="num">{sign(r.paired_delta.mean)}</span>, 95% interval{' '}
           <span className="num">{ci(r.paired_delta.ci95, sign)}</span>. The interval includes zero: no measurable gain for this

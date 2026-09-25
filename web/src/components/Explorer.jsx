@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import EcgPaper from './EcgPaper'
+import Vcg3D from './Vcg3D'
 import { CLASS_NAMES, fmt } from '../lib/data'
 
 const who = (c) => `${c.age == null ? 'age unknown' : `${c.age} y`}, ${c.sex}`
@@ -16,7 +17,8 @@ function LabelChips({ labels }) {
   )
 }
 
-function ScorePanel({ c, classes, testN }) {
+// memo: the 3D view's cursor re-renders the explorer many times a second while it plays
+const ScorePanel = memo(function ScorePanel({ c, classes, testN }) {
   return (
     <section aria-labelledby="scores-title" className="card p-4 space-y-3">
       <h2 id="scores-title" className="t-title">
@@ -66,31 +68,51 @@ function ScorePanel({ c, classes, testN }) {
       </p>
     </section>
   )
-}
+})
+
+const CaseList = memo(function CaseList({ shown, currentId, onSelect }) {
+  return (
+    <ul aria-label="Test ECGs" className="card max-h-[40vh] lg:max-h-[70vh] overflow-y-auto relative">
+      {shown.map((x) => (
+        <li key={x.id}>
+          <button type="button" className="row-btn" aria-current={x.id === currentId} onClick={() => onSelect(x.id)}>
+            <span className="block font-semibold">ECG {x.id}</span>
+            <span className="block text-[14px] text-muted-foreground">{who(x)}</span>
+            <span className="mt-1 block">
+              <LabelChips labels={x.labels} />
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+})
 
 export default function Explorer({ site }) {
   const { cases, rule } = site.sample
   const [filter, setFilter] = useState('ALL')
   const [selectedId, setSelectedId] = useState(cases[0].id)
+  const [cursor, setCursor] = useState(null) // seconds: the instant the 3D view is showing
   const shown = useMemo(() => (filter === 'ALL' ? cases : cases.filter((c) => c.labels.includes(filter))), [cases, filter])
   const c = cases.find((x) => x.id === selectedId) ?? cases[0]
   const macro = site.results.control.macro_auc
 
   // on narrow screens the ECG sits below the list: bring it into view, or the tap looks like it did nothing
-  function select(id) {
+  const select = useCallback((id) => {
     setSelectedId(id)
     if (window.matchMedia?.('(max-width: 1023px)').matches) {
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       requestAnimationFrame(() => document.getElementById('ecg-title')?.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' }))
     }
-  }
+  }, [])
 
   return (
     <div className="space-y-6">
       <header className="space-y-2 max-w-3xl">
         <h1 className="t-display">ECG explorer</h1>
         <p className="t-body text-muted-foreground">
-          Real 12-lead ECGs from the PTB-XL test fold (patients the model never trained on), with the model’s saved predictions.
+          Real 12-lead ECGs from the PTB-XL test fold (patients the model never trained on), each also shown as the heart’s 3D
+          electrical vector, with the model’s saved predictions.
           The model scores five diagnostic classes with a test macro AUC of {macro.toFixed(3)} over all {fmt(site.test.n)} test
           ECGs. {rule}
         </p>
@@ -109,19 +131,7 @@ export default function Explorer({ site }) {
               ))}
             </select>
           </label>
-          <ul aria-label="Test ECGs" className="card max-h-[40vh] lg:max-h-[70vh] overflow-y-auto relative">
-            {shown.map((x) => (
-              <li key={x.id}>
-                <button type="button" className="row-btn" aria-current={x.id === c.id} onClick={() => select(x.id)}>
-                  <span className="block font-semibold">ECG {x.id}</span>
-                  <span className="block text-[14px] text-muted-foreground">{who(x)}</span>
-                  <span className="mt-1 block">
-                    <LabelChips labels={x.labels} />
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <CaseList shown={shown} currentId={c.id} onSelect={select} />
         </aside>
 
         <section aria-labelledby="ecg-title" className="space-y-4 min-w-0">
@@ -134,7 +144,8 @@ export default function Explorer({ site }) {
               Cardiologist labels: <LabelChips labels={c.labels} />
             </span>
           </div>
-          <EcgPaper id={c.id} />
+          <EcgPaper id={c.id} cursor={cursor} />
+          <Vcg3D key={c.id} id={c.id} noise={c.noise} onCursor={setCursor} />
           <ScorePanel c={c} classes={site.classes} testN={site.test.n} />
         </section>
       </div>

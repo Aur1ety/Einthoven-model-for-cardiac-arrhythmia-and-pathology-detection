@@ -54,6 +54,17 @@ export default function MethodView({ site }) {
           </li>
           <li>Scores are uncalibrated model outputs, not probabilities of disease.</li>
           <li>
+            The 3D view applies the released Kors (1990) coefficients (the file <code>data/processed/vcg_kors_coefficients.json</code>)
+            to the 500 Hz version of each record, fetched from PhysioNet and checked against its published checksums; the model
+            itself used 100 Hz. The result is an estimate: a single 3D arrow explains most of what the 12 leads show, not all of
+            it. Beats are found by a simple detector for display only: a beat must show in both the limb leads and the chest
+            leads, which keeps most electrode noise out. Each beat is cut short so it does not run into its neighbours, and
+            shifted so its quietest 20 ms before the QRS sits at the origin. A test recombines the 100 Hz leads with the same
+            coefficients for all 100 ECGs and checks the result has the same shape (correlation above 0.85 on every axis) and
+            the same scale (within a factor of 0.8–1.25) as the 500 Hz vector; the two cannot match exactly, because PTB-XL
+            filtered its 100 Hz files.
+          </li>
+          <li>
             The audit view recomputes all four limb-lead identities in your browser from the same samples the audit used; a test
             checks they reproduce the audit file’s values.
           </li>

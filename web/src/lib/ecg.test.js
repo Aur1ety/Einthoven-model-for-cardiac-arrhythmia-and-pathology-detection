@@ -57,7 +57,8 @@ describe('nothing is cut off', () => {
 describe('exported data', () => {
   it('every case and flagged record has a 12 x 1000 microvolt ECG file', () => {
     const ids = [...site.sample.cases, ...site.flagged].map((c) => c.id)
-    expect(readdirSync(path.join(DATA, 'ecg'))).toHaveLength(new Set(ids).size)
+    // (the 3D view's *.vcg.json files sit alongside; they are checked in vcg.test.js)
+    expect(readdirSync(path.join(DATA, 'ecg')).filter((f) => !f.endsWith('.vcg.json'))).toHaveLength(new Set(ids).size)
     for (const id of ids.slice(0, 20)) {
       const r = ecg(id)
       expect(r.signal).toHaveLength(12)
