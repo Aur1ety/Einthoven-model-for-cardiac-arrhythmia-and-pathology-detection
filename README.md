@@ -28,11 +28,12 @@ files.
 **Einthoven-consistency audit, a standalone finding**
 
 A systematic check of the limb-lead identities (Einthoven's triangle,
-aVR, aVL, aVF) across all 21,799 PTB-XL records, using the Kors 1990
-regression coefficients (verified against Jaros et al. 2019, Table 2).
+aVR, aVL, aVF) across all 21,799 PTB-XL records. The audit file also
+carries each record's Kors 1990 VCG means (coefficients verified against
+Jaros et al. 2019, Table 2).
 
-- **99.74%** of records are consistent to within 1–1.5 µV (ADC
-  quantization level)
+- **99.74%** of records are consistent to within the 5 µV tolerance
+  (99.61% to within 1.5 µV, the ADC quantization level)
 - Only **57 records (0.26%)** are flagged (any identity off by more
   than 5 µV at any sample). The audit did not test causes. In 34 of the
   57 the break is confined to the last 0.1 s of the 10 s window (41
@@ -127,7 +128,7 @@ Einthoven/
 │   ├── raw/                      # PTB-XL (gitignored, re-downloadable)
 │   └── processed/                # audit outputs, VCG coefficients
 ├── output/
-│   ├── baselines/                # Spec 02 trained models + results
+│   ├── baselines/                # Spec 02 baseline results (te_results.csv)
 │   └── phase_b/                  # Phase B results (control + VCG-augmented)
 ├── tests/
 ├── requirements.txt

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ecg-arrhythmia"
 version = "0.1.0"
-description = "ECG arrhythmia detection on PTB-XL with patient-level splits (TCN / Transformer / ensemble)"
+description = "ECG diagnosis on PTB-XL: official-split CNN baselines, VCG-augmented A/B test, Einthoven consistency audit"
 requires-python = ">=3.10"
 
 [tool.setuptools.packages.find]

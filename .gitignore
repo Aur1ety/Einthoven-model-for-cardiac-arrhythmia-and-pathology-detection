@@ -3,8 +3,8 @@ data/raw/*
 data/cpsc2018/*
 # data/ptbxl is a Windows junction to data/raw (vendor code needs a parent
 # folder named 'ptbxl'). Git follows the junction, so ignore it explicitly or
-# `git add -A` would stage the entire raw PTB-XL dataset (~2 GB, redistribution
-# not permitted by the PTB-XL license).
+# `git add -A` would stage the entire raw PTB-XL dataset (~2 GB, too large for
+# git; re-download it from PhysioNet, where it is licensed CC BY 4.0).
 data/ptbxl/
 !data/raw/.gitkeep
 !data/raw/scp_statements.csv

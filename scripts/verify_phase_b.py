@@ -4,7 +4,7 @@ Phase B completion verification (AC1-AC9) on GPU-run outputs.
 Run on the laptop: python scripts/verify_phase_b.py
 Reads:
   data/processed/{control,vcg_augmented}/   (X/y/split data, local)
-  output/phase_b/{control,vcg_augmented}/   (fetched from cluster)
+  output/phase_b/{control,vcg_augmented}/   (GPU-run outputs)
 Writes nothing except printing the AC report.
 """
 

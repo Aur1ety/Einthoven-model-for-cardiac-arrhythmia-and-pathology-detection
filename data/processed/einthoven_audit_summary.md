@@ -76,13 +76,14 @@ All numbers below are from this run (this dataset, this code, single pass).
   1.5 uV. Yet the maxima are large:
   5872 (Einthoven), 2200 (aVR),
   3043 (aVL), 3048 (aVF) uV.
-  The distribution is therefore extremely right-tailed: ~99.8-99.9% of records
-  are consistent to within 1-1.5 uV (ADC-quantization level), while a small
-  number carry large-amplitude artifacts. No flags occur near the p99
-  (1.0 uV <= 5.0 uV).
+  The distribution is therefore extremely right-tailed: 99.6-99.9% of records
+  per identity (99.61% on all four at once) are consistent to within 1.5 uV
+  (ADC-quantization level), while a small number carry large residuals.
+  No flags occur near the p99 (1.0 uV <= 5.0 uV).
 - 22 records have Einthoven max residual > 50 uV and 18 have some
   identity residual > 200 uV - plausible real-world artifacts (motion,
-  electrode pop, lead disconnection), not an arithmetic error.
+  electrode pop, lead disconnection), not an arithmetic error; the audit
+  did not test causes.
 - Contrary to expectation, the PTB-XL noise annotations do NOT systematically
   predict the audit flag: 0.20% of annotated-noisy records are
   flagged vs 0.28% of unannotated records (10 of

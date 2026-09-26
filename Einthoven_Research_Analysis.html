@@ -182,13 +182,13 @@ significant difference.</strong> The physics channels add no measurable
 diagnostic value on top of the raw leads under this architecture and
 protocol. The neural network already extracts everything the VCG gives it.</p>
 <h3 id="audit">Finding 2: the Einthoven-consistency audit (standalone, citable)</h3>
-<p>Because the 12 limb leads obey exact arithmetic identities (Einthoven's
+<p>Because the 6 limb leads obey exact arithmetic identities (Einthoven's
 triangle: II = I + III, and similar rules for the augmented leads), every
 record can be checked for internal consistency. We ran this check on all
 21,799 PTB-XL records:</p>
 <ul>
-<li><strong>99.74%</strong> of records are consistent to within 1 to 1.5 microvolts (the quantization level of the measurement hardware)</li>
-<li>Only <strong>57 records (0.26%)</strong> are flagged, and all of them are heavy-tailed recording artifacts (motion, electrode pop-off, lead disconnect), not arithmetic errors</li>
+<li><strong>99.74%</strong> of records are consistent to within the 5 microvolt tolerance (99.61% to within 1.5 microvolts, the quantization level of the measurement hardware)</li>
+<li>Only <strong>57 records (0.26%)</strong> are flagged (an identity off by more than 5 microvolts); the audit did not test causes</li>
 <li>PTB-XL's own built-in "noisy" annotations do <em>not</em> predict the audit flag (0.20% of annotated-noisy records flagged vs 0.28% of unannotated records), so the two systems catch different failure modes</li>
 </ul>
 <p>This is a standalone quality-control result for anyone using PTB-XL: the
@@ -245,7 +245,7 @@ not transfer well from PTB-XL to CPSC2018.</strong></p>
 <h2 id="published">What is published</h2>
 <p><strong>Repository:</strong> <a href="https://github.com/Aur1ety/Einthoven-model-for-cardiac-arrhythmia-and-pathology-detection">Einthoven-model-for-cardiac-arrhythmia-and-pathology-detection</a></p>
 <ul>
-<li>Public now: full results (Phase B table, audit data, coefficients, generalization report), baseline reproduction code, acceptance-criteria verifiers</li>
+<li>Public now: Phase B results table, audit data, coefficients, baseline reproduction code, acceptance-criteria verifiers (Findings 3 and 4 are summarized on this page only; their reports are not public)</li>
 <li>Withheld until the paper is published: the VCG channel construction script, the Phase B training script, the audit script, and the model source (kept out to avoid leaking methodological details before submission)</li>
 <li>License: all rights reserved until publication</li>
 </ul>
