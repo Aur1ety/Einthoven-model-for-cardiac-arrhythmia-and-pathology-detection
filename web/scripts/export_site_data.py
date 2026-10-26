@@ -6,8 +6,12 @@ Nothing is re-trained or re-run. The site shows:
   - the Phase B control model's SAVED test-set predictions
     (output/phase_b/control/models/fastai_resnet1d_wang/y_test_pred.npy), the same
     array the README's 0.9301 macro AUC is computed from;
-  - result numbers read from the repo's own outputs, each re-derived here and
-    asserted against the stored value, so the site cannot drift from the research.
+  - result numbers read from the repo's own outputs, some re-derived here (the macro
+    AUCs are asserted against the stored values; the paired interval is recomputed
+    from the stored predictions and bootstrap resamples); the 90% intervals and the
+    baseline AUCs are used as stored. The audit page's 500 Hz paragraph, its
+    noise-annotation odds ratio and p-value, and the length of the 500 Hz held end
+    are static text from the paper draft and are not checked here.
 
 Row alignment of the saved predictions is not assumed: the test-fold label matrix is
 rebuilt from ptbxl_database.csv + scp_statements.csv exactly as the vendor code does
@@ -274,6 +278,7 @@ def main():
             assert len(bad), m["id"]
             m["breaks"] = {"samples": int(len(bad)), "first_s": round(float(bad[0]) / 100, 2), "last_s": round(float(bad[-1]) / 100, 2)}
 
+    # half_second_or_more: 50+ break samples in total (0.5 s at 100 Hz), spread over several runs, not one continuous break
     edge = {
         "last_0_1_s": int(sum(m["breaks"]["first_s"] >= 9.9 for m in flagged_cases)),
         "last_1_s": int(sum(m["breaks"]["first_s"] >= 9.0 for m in flagged_cases)),

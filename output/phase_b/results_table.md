@@ -3,7 +3,7 @@
 Task: PTB-XL superdiagnostic, 5 classes (CD/HYP/MI/NORM/STTC), one-vs-rest macro AUC, test fold = 10
 Architecture: resnet1d_wang (vendor repo, unmodified)
 Hyperparameters: EPOCHS=50, BS=128, LR=1e-2, seed=42, bootstrap n=100
-Hardware: 2x NVIDIA A30, cudnn.deterministic=True
+Hardware: one NVIDIA A30 per run (2-GPU node), cudnn.deterministic=True
 
 | Run | Channels | Test AUC | CI | Note |
 |-----|---------:|---------:|--------|------|
@@ -16,8 +16,13 @@ Hardware: 2x NVIDIA A30, cudnn.deterministic=True
 
 ## Honest Interpretation
 
-Paired delta (VCG - control) = +0.00055, 95% CI [-0.00216, +0.00305].
+Paired delta (VCG - control) = +0.00042 on the full test set. Over the 100 paired
+bootstrap resamples the mean delta is +0.00055 and the 95% percentile interval is
+[-0.00216, +0.00305].
 
-**No statistically significant difference** - the delta CI crosses 0.
+**No statistically significant difference** - the delta interval crosses 0.
+Each arm was trained once, and seed=42 does not give matched initialisation (the
+first layer has 12 vs 15 input channels), so the interval covers test-set sampling
+only, not run-to-run variation.
 The 3 derived Kors VCG channels add no measurable diagnostic value
 on top of the 12 raw leads under this architecture and protocol.

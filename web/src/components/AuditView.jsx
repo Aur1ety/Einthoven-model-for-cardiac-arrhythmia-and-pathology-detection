@@ -351,13 +351,29 @@ export default function AuditView({ site }) {
 
         <section aria-labelledby="a-noise" className="measure space-y-2">
           <h2 id="a-noise" className="t-title">
-            PTB-XL’s own noise notes do not predict the flag
+            PTB-XL’s own noise notes show no detectable link to the flag
           </h2>
+          {/* the odds ratio and p-value are static numbers from the paper draft; not exported to site.json */}
           <p className="t-body">
             Recordings PTB-XL annotates as noisy are flagged {pct(noisy.flagged, noisy.records)} of the time ({noisy.flagged} of{' '}
             {fmt(noisy.records)}); recordings without a noise note, {pct(clean.flagged, clean.records)} ({clean.flagged} of{' '}
-            {fmt(clean.records)}). The two checks appear to catch different problems, so this audit adds a separate quality signal
-            (with only {noisy.flagged + clean.flagged} flagged recordings in all, this is a comparison of small counts).
+            {fmt(clean.records)}). No association was detected (odds ratio 0.71, p = 0.43), though with only{' '}
+            {noisy.flagged + clean.flagged} flagged recordings in all this is a comparison of small counts.
+          </p>
+        </section>
+
+        {/* static numbers from the paper draft (paper/main.tex); not exported to site.json */}
+        <section aria-labelledby="a-500" className="measure space-y-2">
+          <h2 id="a-500" className="t-title">
+            The 500 Hz files flag mostly different recordings
+          </h2>
+          <p className="t-body">
+            PTB-XL also stores every recording at 500 Hz. The same check flags only 9 of those files, and just 3 of them are
+            among the {a.flagged} flagged here. Away from the ends of the recordings, one fixed filter turns the 500 Hz files
+            into the 100 Hz files to within 1 µV in 21,685 of the 21,736 recordings that pass at both rates, so each file set
+            can check the other, lead by lead. That comparison found 17 recordings that pass every identity at both rates but
+            whose chest leads differ between the two file sets by 1.1 to 43.8 mV: faults this check cannot see, because it
+            tests only the limb leads. A paper on these results is in preparation.
           </p>
         </section>
 
@@ -366,11 +382,13 @@ export default function AuditView({ site }) {
             <h2 id="a-flagged" className="t-title">
               The {a.flagged} flagged recordings
             </h2>
+            {/* the 45 to 65 sample held-end length is a static number from the paper draft; not exported to site.json */}
             <p className="t-body text-ink-2">
-              Pick one to see where the law breaks. The audit did not test why it breaks. In {edge.last_0_1_s} of the {a.flagged}{' '}
-              recordings the break is confined to the last 0.1 s of the 10 s window ({edge.last_1_s} within the last second), which
-              points to something at the edge of the stored window rather than during the recording; {edge.half_second_or_more}{' '}
-              break for half a second or more.
+              Pick one to see where the law breaks. The audit shows where, not why. In {edge.last_0_1_s} of the {a.flagged}{' '}
+              recordings every break falls in the last 0.1 s of the 10 s window, inside the final stretch (45 to 65 samples,
+              about 0.1 s) that PTB-XL’s 500 Hz files hold constant in all 12 leads; in {edge.last_1_s}, every break falls within
+              the last second. Most breaks are brief: the {edge.half_second_or_more} recordings with 50 or more break samples
+              spread them over several separate runs.
             </p>
           </div>
           <div className="rail-layout">

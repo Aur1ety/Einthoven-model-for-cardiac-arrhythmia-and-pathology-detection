@@ -3,8 +3,8 @@
 Run date: 2026-08-29T13:07:39
 Wall time: 2.7 minutes
 Dataset: PTB-XL v1.0.3 (21799 records, 18869 unique patients,
-12-lead, 100 Hz, 10 s windows, raw ADC values in uV)
-Tolerance: 5.0 uV (PTB-XL 16-bit ADC, 1 uV/LSB; Wagner et al. 2020)
+12-lead, 100 Hz, 10 s windows, stored values in uV)
+Tolerance: 5.0 uV (leads stored as 16-bit integers, 1 uV per unit; Wagner et al. 2020)
 
 ## 1. Identity Residual Statistics (uV)
 
@@ -21,8 +21,8 @@ Per-record max |residual| over the 1000-sample window, across all records.
 
 - Records flagged: **57 / 21799 (0.26%)**
 - Rule: ANY of the 4 identity residuals > 5.0 uV at ANY sample
-- Note: a 10 s window contains ~5-12 QRS complexes; a max-over-window rule is
-  therefore far stricter than a typical per-beat clinical check.
+- Note: a 10 s window contains about 8 to 25 QRS complexes (median 12 in the
+  website's 100-record sample), and the flag uses the maximum over the whole window.
 
 ## 3. Crosstab: consistency_flag x signal_quality
 
@@ -61,7 +61,12 @@ the typical baseline level, not QRS amplitude).
 | vcg_z_mean | 2.7 | 1.5 |
 ## 6. Honest Findings
 
-All numbers below are from this run (this dataset, this code, single pass).
+All numbers below are from this run (this dataset, this code, single pass),
+except where marked as a follow-up.
+
+Follow-up (October 2026): the residual columns of einthoven_audit.csv were
+replaced with exact values from an integer recount (every change is below
+5e-13 uV, and no flag changed). The statistics in this file are unchanged.
 
 - Per-identity share of records with max residual within 5.0 uV:
   Einthoven 99.8%, aVR 99.9%,
@@ -78,22 +83,33 @@ All numbers below are from this run (this dataset, this code, single pass).
   3043 (aVL), 3048 (aVF) uV.
   The distribution is therefore extremely right-tailed: 99.6-99.9% of records
   per identity (99.61% on all four at once) are consistent to within 1.5 uV
-  (ADC-quantization level), while a small number carry large residuals.
+  (the leads are stored as whole microvolts, so Einthoven's residual takes
+  whole-microvolt values and the augmented residuals multiples of 0.5 uV),
+  while a small number carry large residuals.
   No flags occur near the p99 (1.0 uV <= 5.0 uV).
 - 22 records have Einthoven max residual > 50 uV and 18 have some
-  identity residual > 200 uV - plausible real-world artifacts (motion,
-  electrode pop, lead disconnection), not an arithmetic error; the audit
-  did not test causes.
-- Contrary to expectation, the PTB-XL noise annotations do NOT systematically
-  predict the audit flag: 0.20% of annotated-noisy records are
+  identity residual > 200 uV. The near-exact residuals elsewhere suggest
+  the devices computed four limb leads from two. Motion or a loose
+  electrode changes the electrode potentials, and leads computed from the
+  same samples still satisfy the identities, so these breaks point to one
+  or more stored leads being altered after that step (by corruption or
+  lead-by-lead processing).
+  The audit itself did not test causes. Follow-up analyses (see the
+  README) find that in 34 of the 57 flagged records every break falls in
+  the last 0.1 s, inside the held end of the 500 Hz files (their last 45
+  to 65 samples are constant in all leads), and that flags concentrate in
+  paced recordings (11 of 57; odds ratio 18).
+- The PTB-XL noise annotations show no detectable association with the
+  audit flag (odds ratio 0.71, 95% interval 0.32 to 1.43, p = 0.43;
+  follow-up): 0.20% of annotated-noisy records are
   flagged vs 0.28% of unannotated records (10 of
   5010 noisy, 47 of 16789 clean). The
   annotations are per-lead human notes (drift/static/burst/electrode problems)
   while the audit is whole-window arithmetic on the limb-lead identities; the
   two only partially overlap.
 - Per-fold flag rates range 0.09% (fold 5) to
-  0.50% (fold 2) - folds are patient-stratified by the
-  PTB-XL authors, so small differences reflect case-mix, not leakage.
+  0.50% (fold 2); the differences between folds are compatible with
+  chance (chi-squared 11.6, 9 degrees of freedom, p = 0.24; follow-up).
 - VCG window means cluster near 0 (Section 5), as expected for raw 10 s
   windows without DC removal. The Kors regression coefficients were verified
   against Jaros et al. 2019 (open access, Table 2), which reproduces the

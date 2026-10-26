@@ -98,41 +98,36 @@ Learning for ECG Diagnosis</h1>
 <hr />
 <h2 id="what-is-this-project">What is this project?</h2>
 <p><strong>The one-line version:</strong> an ECG machine gives you 12 separate
-traces. Physics says those 12 traces are just 2D shadows of one 3D electrical
-vector beating inside the heart. This project tests whether giving a neural
+traces. Under the standard heart-vector (dipole) approximation, those traces
+are projections of one 3D electrical vector that changes through each
+heartbeat. This project tests whether giving a neural
 network that reconstructed 3D vector (the vectorcardiogram, or VCG) on top of
 the 12 raw traces makes it better at diagnosing heart conditions.</p>
 <p><strong>The hypothesis:</strong> modern deep learning models treat the 12
 leads as a flat pile of 12 signals and learn the relationships between them
-themselves. But the relationships are actually known: they are fixed linear
-equations published by Kors et al. in 1990, which rebuild the 3D cardiac
-vector from leads I, II, V1 to V6. If we hand the model the physics directly
+themselves. But a well-known estimate exists: Kors et al. (1990) published a
+fixed linear regression that reconstructs the 3D cardiac vector from leads I,
+II and V1 to V6. If we hand the model that reconstruction directly
 as 3 extra channels, maybe it learns faster and diagnoses better. The honest
 question is whether it already figures all of that out on its own.</p>
 <p><strong>Short answer (spoiler):</strong> under our exact protocol, the 3
 physics channels added no measurable improvement. That is a real, defensible
-negative result, and the project still produced two genuinely useful side
-findings (a quality-control audit and a cross-dataset generalization study)
-that stand on their own.</p>
+negative result, and the project produced side findings that stand on their
+own: a quality-control audit of the lead identities in both of
+PTB-XL's file sets (100 Hz and 500 Hz), and a check that lets the two file
+sets test each other.</p>
 <hr />
 <h2 id="data">The data</h2>
 <p><strong>Primary dataset: PTB-XL</strong> (<a href="https://www.nature.com/articles/s41597-020-0495-6">Wagner et al. 2020, Scientific Data</a>)</p>
 <ul>
-<li>21,799 real 12-lead ECG recordings from 18,869 patients, 100 Hz, 10-second windows</li>
-<li>Every record has cardiologist-verified labels in the SCP-ECG coding system</li>
+<li>21,799 real 12-lead ECG recordings from 18,869 patients, 10 seconds each, stored at 500 Hz with a downsampled 100 Hz copy (the models use the 100 Hz files)</li>
+<li>Labels are SCP-ECG statements. 16,056 records, including all of folds 9 and 10 (validation and test), were validated by a cardiologist; the other 5,743 are automatically generated reports</li>
 <li>Labels are grouped into 5 diagnostic superclasses:
 <ul>
-<li><strong>NORM</strong> (normal), <strong>MI</strong> (heart attack history), <strong>STTC</strong> (ST/T changes), <strong>CD</strong> (conduction disturbances), <strong>HYP</strong> (hypertrophy)</li>
+<li><strong>NORM</strong> (normal), <strong>MI</strong> (myocardial infarction or injury), <strong>STTC</strong> (ST/T changes), <strong>CD</strong> (conduction disturbances), <strong>HYP</strong> (hypertrophy)</li>
 </ul></li>
 <li>411 records are excluded from the classification task because their SCP labels map to none of the 5 diagnostic superclasses, leaving the 21,388-record standard PTB-XL superdiagnostic subset (this is a label-coverage filter, not a pacemaker filter; 291 records carry a pacemaker annotation and most, but not all, fall inside these 411)</li>
 <li>Official split used throughout, exactly as the dataset paper prescribes: folds 1 to 8 for training, fold 9 for validation, fold 10 for testing. Splits are patient-disjoint (the same patient never appears in both train and test), which prevents the model from memorizing a person instead of learning a pattern</li>
-</ul>
-<p><strong>Secondary dataset (generalization test): CPSC2018</strong>
-(<a href="https://physionet.org/content/challenge-2020/1.0.2/">PhysioNet, CC BY 4.0</a>)</p>
-<ul>
-<li>6,877 real ECGs recorded in China, 12 leads, 500 Hz</li>
-<li>9 native classes: Normal, AF, I-AVB, LBBB, RBBB, PAC, PVC, STD, STE</li>
-<li>Used to test whether a model trained on German patients also works on Chinese patients. Zero training on this data: the PTB-XL-trained model was only run, never fine-tuned</li>
 </ul>
 <hr />
 <h2 id="method">The method</h2>
@@ -161,9 +156,12 @@ cross-verified against a second open-access source
 (<a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6678609/">Jaros et al. 2019, Sensors, Table 2</a>)
 and agree exactly. The VCG model simply gets those 3 extra channels alongside
 the 12 raw leads (15 channels total).</p>
-<p><strong>Step 3. The controlled A/B test (Phase B).</strong> Identical
-architecture, hyperparameters, random seed, and train/val/test split. Only
-the input channels differ: 12 (control) vs 15 (VCG-augmented).</p>
+<p><strong>Step 3. The controlled A/B test (Phase B).</strong> Same
+architecture, hyperparameters, seed value (42) and train/val/test split. Only
+the input channels differ: 12 (control) vs 15 (VCG-augmented). Because the
+first layer then has a different number of weights, the same seed does not
+give matched initialisation, and each arm was trained once, so the intervals
+below reflect test-set sampling only, not run-to-run variation.</p>
 <hr />
 <h2 id="results">The results</h2>
 <h3 id="phase-b">Finding 1: Phase B null result (the main test)</h3>
@@ -176,76 +174,79 @@ the input channels differ: 12 (control) vs 15 (VCG-augmented).</p>
 <tr><td>VCG-augmented</td><td>15</td><td>0.9305</td><td>[0.9247, 0.9355]</td></tr>
 </tbody>
 </table>
-<p>Paired difference (VCG minus control) = +0.00055, 95% CI
-[&minus;0.00216, +0.00305]. <strong>The CI crosses zero: no statistically
-significant difference.</strong> The physics channels add no measurable
-diagnostic value on top of the raw leads under this architecture and
-protocol. The neural network already extracts everything the VCG gives it.</p>
+<p>Paired difference (VCG minus control) = +0.00042 on the full test set.
+Over 100 paired bootstrap resamples the mean is +0.00055 and the 95%
+interval is [&minus;0.00216, +0.00305]. <strong>The interval crosses zero:
+no statistically significant difference.</strong> The physics channels add
+no measurable diagnostic value on top of the raw leads under this
+architecture and protocol. That fits what they are: a fixed linear
+combination of leads the network already receives.</p>
 <h3 id="audit">Finding 2: the Einthoven-consistency audit (standalone, citable)</h3>
 <p>Because the 6 limb leads obey exact arithmetic identities (Einthoven's
-triangle: II = I + III, and similar rules for the augmented leads), every
+law: II = I + III, and Goldberger's equations for the augmented leads), every
 record can be checked for internal consistency. We ran this check on all
-21,799 PTB-XL records:</p>
+21,799 PTB-XL records in the 100 Hz files:</p>
 <ul>
-<li><strong>99.74%</strong> of records are consistent to within the 5 microvolt tolerance (99.61% to within 1.5 microvolts, the quantization level of the measurement hardware)</li>
-<li>Only <strong>57 records (0.26%)</strong> are flagged (an identity off by more than 5 microvolts); the audit did not test causes</li>
-<li>PTB-XL's own built-in "noisy" annotations do <em>not</em> predict the audit flag (0.20% of annotated-noisy records flagged vs 0.28% of unannotated records), so the two systems catch different failure modes</li>
+<li><strong>99.74%</strong> of records are consistent to within the 5 microvolt tolerance (99.61% to within 1.5 microvolts). The leads are stored as whole microvolts, so Einthoven's residual takes whole-microvolt values and the augmented residuals multiples of 0.5 microvolts. Typical maxima are 1 to 1.5 microvolts; augmented maxima of 1.5 microvolts exceed what a single rounding produces, so the leads were probably rounded at more than one processing stage</li>
+<li>Only <strong>57 records (0.26%)</strong> are flagged (an identity off by more than 5 microvolts). In 34 of them every break falls in the last 0.1 s of the recording; the longest continuous break lasts 0.33 s</li>
+<li>Flags concentrate in paced recordings: 11 of the 57 are paced, against 291 of all 21,799 records (odds ratio 18)</li>
+<li>PTB-XL's own built-in noise annotations show no detectable association with the audit flag (0.20% of annotated records flagged vs 0.28% of unannotated records; odds ratio 0.71, 95% interval 0.32 to 1.43, p = 0.43)</li>
 </ul>
 <p>This is a standalone quality-control result for anyone using PTB-XL: the
 audit dataset and the verified transform coefficients are released in the
 repository.</p>
-<h3 id="residuals">Finding 3: do the residuals carry diagnostic info? (Spec 05)</h3>
+<h3 id="fivehundred">Finding 3: the 500 Hz files and a cross-rate check (paper in preparation)</h3>
+<p>The same audit run on PTB-XL's 500 Hz files, and a comparison of the two
+file sets:</p>
+<ul>
+<li>At 500 Hz only <strong>9 records</strong> are flagged, and just <strong>3</strong> of them are among the 57 flagged at 100 Hz</li>
+<li>Every 500 Hz file ends with its last 45 to 65 samples (about 0.1 s) held constant in all 12 leads. All breaks of the 34 end-of-recording records at 100 Hz fall inside this held end, so the two file sets cannot be compared there</li>
+<li>Away from the recording ends, one fixed linear filter maps the 500 Hz files onto the 100 Hz files to within 1 microvolt in 21,685 of the 21,736 records unflagged at both rates, so each file set can check the other, lead by lead</li>
+<li>That check shows which leads depart at the 100 Hz breaks, and it exposes 17 records that pass the identities at both rates but whose chest leads differ between the file sets by 1.1 to 43.8 mV, faults the identities cannot see</li>
+<li>Removing the 4 test records flagged at 100 Hz (the files the models use) changes test macro AUC by less than 0.0002. The flagged training records were kept, and the effect of the other faults on the benchmark was not tested</li>
+</ul>
+<p>The files cannot show which processing step produced each fault.</p>
+<h3 id="residuals">Finding 4: do the residuals carry diagnostic info? (Spec 05)</h3>
 <p>Follow-up question: the consistency checks leave a small residual (how far
 a record deviates from the exact identity). Could that residual differ by
-diagnosis? Tested on 21,508 records with proper multiple-comparison
-correction (Benjamini-Hochberg FDR, alpha 0.05):</p>
+diagnosis? Tested on the 21,508 non-paced records, using the exact residual
+maxima of the 100 Hz files, with Benjamini-Hochberg FDR correction (alpha
+0.05) applied separately to the 4 Kruskal-Wallis tests and to the 20
+Mann-Whitney tests:</p>
 <ul>
-<li>4 Kruskal-Wallis tests (one per residual type): 3 survive correction, but the largest effect size is eta-squared = 0.0039, far below the 0.01 "small effect" threshold</li>
-<li>20 Mann-Whitney tests (4 residual types x 5 classes): 8 survive correction, but the largest Cliff's delta is 0.044, well below the 0.147 "negligible to small" boundary</li>
+<li>4 Kruskal-Wallis tests on the 16,235 single-label records (one per identity): 2 survive correction (aVR and aVL), and the largest effect size is eta-squared = 0.0011, far below the 0.01 "small effect" threshold. Einthoven's residual shows no detectable difference (H = 2.3, p = 0.68)</li>
+<li>20 Mann-Whitney tests on 21,374 records (4 identities x 5 classes, each class against the rest): 5 survive correction (for aVR, aVL and aVF), and the largest |Cliff's delta| is 0.026, well below the 0.147 "negligible" boundary</li>
+<li>No superclass has a flag rate that differs detectably from that of the other non-paced records (odds ratios 0.71 to 1.50, p = 0.26 to 0.86)</li>
 </ul>
-<p><strong>Conclusion: statistically significant, practically negligible.</strong>
-A dataset this big detects tiny distributional shifts that carry no useful
-diagnostic information. The residuals do not help distinguish patients.</p>
-<h3 id="generalization">Finding 4: cross-dataset generalization to CPSC2018 (Spec 06)</h3>
-<p>The PTB-XL-trained resnet1d_wang model was run (zero training) on 4,746
-usable CPSC2018 records. Important limitation, stated up front: CPSC2018
-contains <strong>zero MI and zero HYP records</strong>, so this only tests 3
-of the 5 superclasses (NORM, CD, STTC).</p>
-<table>
-<thead>
-<tr><th>Variant</th><th>N</th><th>Macro AUC</th><th>90% CI</th></tr>
-</thead>
-<tbody>
-<tr><td>Full set (STD + STE as STTC)</td><td>4,746</td><td>0.7765</td><td>[0.7679, 0.7833]</td></tr>
-<tr><td>STD-only (STE removed)</td><td>4,526</td><td>0.8020</td><td>[0.7958, 0.8079]</td></tr>
-<tr><td>NORM/CD only (STTC removed)</td><td>3,659</td><td>0.8483</td><td>[0.8394, 0.8561]</td></tr>
-</tbody>
-</table>
-<p>Compared to the in-distribution PTB-XL AUC of 0.9293, performance drops
-substantially, and the drop is not uniform:</p>
-<ul>
-<li><strong>NORM generalizes best</strong> (AUC 0.849 to 0.878): a normal ECG looks nearly the same on any patient, anywhere in the world</li>
-<li><strong>CD generalizes moderately</strong> (AUC 0.813 to 0.819): conduction blocks produce distinctive, anatomy-driven waveforms (wide QRS, axis deviation) that transfer across populations</li>
-<li><strong>STTC generalizes worst</strong> (AUC 0.667 with STE, 0.729 without): ST/T changes are subtle, low-level morphology deviations highly sensitive to electrode placement, baseline wander, and label conventions</li>
-</ul>
-<p>The three-variant design isolates the STE question: removing STE raises
-AUC by +0.025, but removing the remaining ST-T records gives another +0.046.
-So the STE label-mapping decision explains roughly one-third of the STTC
-gap; the other two-thirds is inherent: <strong>STTC as a class simply does
-not transfer well from PTB-XL to CPSC2018.</strong></p>
+<p><strong>Conclusion: a few tests survive correction, but every effect is
+negligible.</strong> In non-paced records, the residual maxima do not
+separate the five diagnostic superclasses in any useful way. An earlier
+version of this page reported 3 of 4 and 8 of 20 surviving tests and larger
+effect sizes. The spurious survivors, all for Einthoven's residual (one
+Kruskal-Wallis test and four Mann-Whitney tests), and the larger effects came
+from floating-point noise in the residual values (below
+10<sup>&minus;12</sup> microvolts), which rank-based tests treat as real
+differences between values that are equal. With exact values one test that
+did not survive before (aVF, CD against the rest) now does.</p>
+<h3 id="generalization">Withdrawn: cross-dataset test on CPSC2018 (Spec 06)</h3>
+<p>An earlier version of this page reported macro AUCs of 0.78 to 0.85 for
+the PTB-XL model run, without retraining, on CPSC2018. A later check found
+that the evaluation did not match the trained model's configuration (its
+stride settings), input normalisation or windowing, so those numbers do not
+measure the model and are withdrawn. The test has not been re-run.</p>
 <hr />
 <h2 id="what-it-means">What the results mean</h2>
 <p>Three honest takeaways:</p>
 <ol>
-<li><strong>The main hypothesis did not survive the test.</strong> For resnet1d_wang on PTB-XL, 3 known-physics VCG channels are redundant: the model learns the same information from the raw leads. This is a negative result reported as a negative result, not papered over.</li>
-<li><strong>The negative result is informative, not worthless.</strong> It says that for this architecture family and this task, physics-grounded inputs do not beat learned inputs. The value of VCG-based inputs remains open for architectures that cannot learn lead relationships as well (shallower models, smaller datasets, different tasks).</li>
-<li><strong>The side findings are real contributions.</strong> (a) A ready-to-use consistency audit for PTB-XL with verified Kors coefficients, (b) a corrected, FDR-controlled analysis of residual-diagnosis dependence, (c) a zero-training cross-dataset generalization study showing which superclasses transfer across populations and which do not.</li>
+<li><strong>The main hypothesis did not survive the test.</strong> For resnet1d_wang on PTB-XL, the 3 Kors-reconstructed VCG channels are redundant: they are linear combinations of leads the model already receives, and adding them did not measurably change performance (one training run per arm). This is a negative result reported as a negative result, not papered over.</li>
+<li><strong>The negative result is informative, not worthless.</strong> It narrows where reconstructed VCG inputs could still help: architectures that cannot learn lead relationships as well, smaller datasets, or other tasks. Measured Frank leads, which come from extra electrodes, were not tested.</li>
+<li><strong>The side findings are real contributions.</strong> (a) A consistency audit for PTB-XL at both sampling rates (the 100 Hz data are released now, the 500 Hz data will follow with the paper), with verified Kors coefficients, (b) a cross-rate check that lets PTB-XL's two file sets test each other lead by lead and exposes chest-lead faults the identities cannot see, (c) an FDR-controlled analysis showing that, in non-paced records, the residual maxima differ only negligibly between the five diagnostic superclasses.</li>
 </ol>
 <hr />
 <h2 id="published">What is published</h2>
 <p><strong>Repository:</strong> <a href="https://github.com/Aur1ety/Einthoven-model-for-cardiac-arrhythmia-and-pathology-detection">Einthoven-model-for-cardiac-arrhythmia-and-pathology-detection</a></p>
 <ul>
-<li>Public now: Phase B results table, audit data, coefficients, baseline reproduction code, acceptance-criteria verifiers (Findings 3 and 4 are summarized on this page only; their reports are not public)</li>
+<li>Public now: Phase B results table, audit data (100 Hz), coefficients, baseline reproduction code, acceptance-criteria verifiers (the per-record 500 Hz audit and cross-rate results behind Finding 3 will be released with the paper)</li>
 <li>Withheld until the paper is published: the VCG channel construction script, the Phase B training script, the audit script, and the model source (kept out to avoid leaking methodological details before submission)</li>
 <li>License: all rights reserved until publication</li>
 </ul>
@@ -253,7 +254,7 @@ not transfer well from PTB-XL to CPSC2018.</strong></p>
 <h2 id="next-steps">Next steps</h2>
 <ol>
 <li><strong>Cost-sensitive threshold optimization</strong> on PTB-XL: tune decision thresholds to clinical costs (a missed MI is far worse than a false alarm) and report F1/recall at matched specificity, not just AUC</li>
-<li><strong>Paper write-up</strong> packaging the null result + audit + generalization study as the contribution, with the withheld code released alongside</li>
+<li><strong>Paper (in preparation)</strong> on the two-rate audit, the cross-rate check and the VCG result, with the withheld code and the per-record results released alongside</li>
 </ol>
 <hr />
 <h2 id="references">References</h2>
